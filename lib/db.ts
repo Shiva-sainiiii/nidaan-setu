@@ -1,0 +1,49 @@
+import "server-only";
+import { Pool, types } from "pg";
+
+// bigint ids and numeric distances as JS numbers (values here are small).
+types.setTypeParser(20, (v) => parseInt(v, 10));
+types.setTypeParser(1700, (v) => parseFloat(v));
+
+const url = process.env.DATABASE_URL;
+const g = globalThis as unknown as { __tbPool?: Pool };
+
+export const pool =
+  g.__tbPool ??
+  new Pool({
+    connectionString: url,
+    ssl: url && !/localhost|127\.0\.0\.1/.test(url) ? { rejectUnauthorized: false } : false,
+    max: 5,
+  });
+g.__tbPool = pool;
+
+export async function q<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+  const res = await pool.query(sql, params);
+  return res.rows as T[];
+}
+
+export async function one<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
+  const rows = await q<T>(sql, params);
+  return rows[0] ?? null;
+}
+
+export type RpcResult = {
+  ok: boolean;
+  reason?: string;
+  message?: string;
+  replayed?: boolean;
+  [k: string]: unknown;
+};
+
+/** Calls a tb.* Postgres function that returns jsonb. All state changes go through these. */
+export async function rpc(fn: string, args: unknown[]): Promise<RpcResult> {
+  if (!/^[a-z_]+$/.test(fn)) throw new Error("bad rpc name");
+  const ph = args.map((_, i) => `$${i + 1}`).join(", ");
+  try {
+    const row = await one<{ r: RpcResult }>(`select tb.${fn}(${ph}) as r`, args);
+    return row?.r ?? { ok: false, message: "No result" };
+  } catch (e) {
+    console.error(`rpc ${fn} failed`, e);
+    return { ok: false, reason: "error", message: e instanceof Error ? e.message : "Database error" };
+  }
+}
