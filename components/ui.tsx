@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CountUp } from "./CountUp";
 import { Icon, type IconName } from "./Icon";
-import { PRIORITY, STATUS, type Status } from "@/lib/format";
+import { CONSENT, PRIORITY, STATUS, type Status } from "@/lib/format";
 
 export function StatusChip({ status, lang = "en" }: { status: string; lang?: "en" | "hi" }) {
   const s = STATUS[status as Status] ?? { en: status, hi: status, cls: "bg-slate-100 text-slate-700 ring-slate-300" };
@@ -10,6 +10,11 @@ export function StatusChip({ status, lang = "en" }: { status: string; lang?: "en
       {lang === "hi" ? s.hi : s.en}
     </span>
   );
+}
+
+export function ConsentChip({ status }: { status: string }) {
+  const c = CONSENT[status] ?? CONSENT.verbal;
+  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${c.cls}`} title={c.hi}>{c.en}</span>;
 }
 
 export function PriorityChip({ p }: { p: string }) {

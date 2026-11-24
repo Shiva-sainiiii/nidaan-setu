@@ -18,7 +18,7 @@ export const DB_MODE: "pglite" | "postgres" = urlCheck ? "postgres" : "pglite";
 const DATA_DIR = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
 const SQL_DIR = path.join(process.cwd(), "db");
 /** Must match the `comment on schema tb` line at the end of db/schema.sql. */
-const SCHEMA_VERSION = "nidaansetu-schema-v3";
+const SCHEMA_VERSION = "nidaansetu-schema-v5";
 const VERSION_SQL = `select coalesce(obj_description(to_regnamespace('tb'), 'pg_namespace'), '') as v`;
 const sqlFile = (f: string) => fs.readFileSync(path.join(SQL_DIR, f), "utf8");
 

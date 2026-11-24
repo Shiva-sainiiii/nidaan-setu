@@ -28,6 +28,8 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
   const [note, setNote] = useState("");
   const [maxKm, setMaxKm] = useState(25);
   const [consent, setConsent] = useState(false);
+  const [consentMode, setConsentMode] = useState<"verbal" | "sms">("verbal");
+  const consentOk = consentMode === "sms" || consent;
   const [waitDays, setWaitDays] = useState<number | "">("");
   const [lookup, setLookup] = useState<Lookup>(null);
   const [labs, setLabs] = useState<Lab[]>([]);
@@ -68,7 +70,7 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
       try {
         const res = await createReferral(
           {
-            phone: digits, name, abha, tests, priority, temp_med: tempMed, note, max_km: maxKm, consent,
+            phone: digits, name, abha, tests, priority, temp_med: tempMed, note, max_km: maxKm, consent, consent_mode: consentMode,
             wait_days: needsWait ? Number(waitDays || allTests.find((t) => t.id === tests[0])?.current_wait_days || 0) : null,
           },
           idem,
@@ -170,6 +172,11 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
               </button>
             ))}
           </div>
+          <p className="mt-1 text-xs text-slate-600">
+            {priority === "P1"
+              ? "P1: no waiting. The first lab to accept gets the patient."
+              : `${priority}: labs send their earliest slot for ${priority === "P2" ? "1 hour" : "4 hours"} (or until all have answered); the earliest slot wins.`}
+          </p>
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={tempMed} onChange={(e) => setTempMed(e.target.checked)} />
@@ -212,17 +219,36 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="font-semibold">4. Consent</h2>
-        <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          <span>{CONSENT_SCRIPT} <span className="text-slate-500">(recorded in the audit log)</span></span>
-        </label>
+        <h2 className="font-semibold">4. Consent <span lang="hi" className="font-normal text-slate-500">/ सहमति</span></h2>
+        <div role="radiogroup" aria-label="How consent is taken" className="grid gap-2 sm:grid-cols-2">
+          {([
+            ["verbal", "Verbal (checkbox)", "मौखिक सहमति", "You read the script; labs are notified at once."],
+            ["sms", "Confirm by SMS", "SMS से पुष्टि", "Patient gets YES / NO SMS. Labs see nothing until YES (24 h to reply)."],
+          ] as const).map(([m, en, hi, d]) => (
+            <button type="button" role="radio" aria-checked={consentMode === m} key={m} onClick={() => setConsentMode(m)}
+              className={`min-h-11 rounded-lg border p-2 text-left text-sm transition-colors ${consentMode === m ? "border-brand-600 bg-brand-50 ring-2 ring-brand-600/30" : "border-slate-300 bg-white hover:bg-slate-50"}`}>
+              <div className="font-semibold">{en} <span lang="hi" className="font-normal text-slate-500">· {hi}</span></div>
+              <div className="text-xs text-slate-500">{d}</div>
+            </button>
+          ))}
+        </div>
+        {consentMode === "verbal" ? (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            <span>{CONSENT_SCRIPT} <span className="text-slate-500">(recorded in the audit log)</span></span>
+          </label>
+        ) : (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+            The patient will get an SMS in Hindi and English: “May we share your details with partner labs? Reply YES or NO.”
+            YES notifies the labs; NO cancels the request and the patient keeps the original date.
+          </p>
+        )}
       </Card>
 
       {error && <Alert kind="error">{error}</Alert>}
       <div className="flex gap-2">
-        <button className={btnPrimary} disabled={pending || !consent || tests.length === 0 || labs.length === 0 || uncovered.length > 0}>
-          {pending ? "Sending…" : tests.length > 1 ? `Send ${tests.length} tests to ${labs.length} labs` : `Send to ${labs.length} lab${labs.length === 1 ? "" : "s"}`}
+        <button className={btnPrimary} disabled={pending || !consentOk || tests.length === 0 || labs.length === 0 || uncovered.length > 0}>
+          {pending ? "Sending…" : consentMode === "sms" ? "Send consent SMS to patient" : tests.length > 1 ? `Send ${tests.length} tests to ${labs.length} labs` : `Send to ${labs.length} lab${labs.length === 1 ? "" : "s"}`}
         </button>
         <Link href="/doctor" className={btnSecondary}>Cancel</Link>
       </div>

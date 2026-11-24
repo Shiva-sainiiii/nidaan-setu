@@ -113,6 +113,10 @@ export function PhonePanel() {
               className="min-h-11 min-w-11 rounded-full bg-brand-700 px-3 text-base font-bold text-white disabled:opacity-50" title="Reply 1 to confirm" aria-label="Reply 1 to confirm">
               1
             </button>
+            <button type="button" disabled={pending || !data} onClick={() => send("YES")} aria-label="Reply YES (हाँ)"
+              className="min-h-11 rounded-full bg-emerald-600 px-3 text-sm font-bold text-white disabled:opacity-50">YES <span lang="hi">हाँ</span></button>
+            <button type="button" disabled={pending || !data} onClick={() => send("NO")} aria-label="Reply NO (नहीं)"
+              className="min-h-11 rounded-full bg-rose-600 px-3 text-sm font-bold text-white disabled:opacity-50">NO <span lang="hi">नहीं</span></button>
             <input aria-label="Reply message" className="min-h-11 flex-1 rounded-full border border-slate-400 px-3 text-base" placeholder="Reply…" value={text} onChange={(e) => setText(e.target.value)} />
             <button disabled={pending || !text.trim()} className="min-h-11 rounded-full bg-brand-700 px-4 text-sm font-semibold text-white disabled:opacity-50">Send</button>
           </form>

@@ -12,7 +12,7 @@ type S = {
   first_name: string; test_en: string; test_hi: string; prep_en: string; prep_hi: string; bring_en: string; bring_hi: string;
   from_name: string; doctor_name: string; lab_name: string | null; lab_address_en: string | null; lab_address_hi: string | null;
   lab_phone: string | null; lab_lat: number | null; lab_lng: number | null; lab_is_free: boolean | null; lab_price: number | null;
-  confirmed: boolean;
+  confirmed: boolean; consent_status: string;
   siblings: { test_en: string; test_hi: string; status: string; code: string; lab: string | null; slot: string | null }[];
 };
 type Lang = "hi" | "en";
@@ -29,6 +29,8 @@ const T = {
     atLab: "आप लैब पहुँच गए हैं। जाँच जारी है।",
     done: "जाँच हो गई। रिपोर्ट आपके डॉक्टर को भेजी जाएगी।",
     reportSent: (d: string, h: string) => `रिपोर्ट ${d} (${h}) को भेज दी गई है। इलाज वहीं जारी रखें।`,
+    consentAsk: "आपकी सहमति का इंतज़ार", consentHint: "SMS में YES (हाँ) भेजें तो ही लैब को आपकी जानकारी मिलेगी। NO भेजने पर कुछ साझा नहीं होगा।",
+    refused: "आपने मना किया। आपकी जानकारी किसी लैब को नहीं दी गई।", consentExpired: "जवाब नहीं आया, इसलिए कुछ साझा नहीं किया गया।",
     prep: "तैयारी", bring: "साथ लाएँ", others: "आपकी बाकी जाँचें", waitingLab: "लैब का इंतज़ार", updated: "अपडेट", help: "सवाल हो तो अपने अस्पताल से संपर्क करें।",
   },
   en: {
@@ -42,6 +44,8 @@ const T = {
     atLab: "You are at the lab. Test in progress.",
     done: "Test done. The report will be sent to your doctor.",
     reportSent: (d: string, h: string) => `The report has been sent to ${d} (${h}). Continue your treatment there.`,
+    consentAsk: "Waiting for your consent", consentHint: "Labs get your details only if you reply YES to the SMS. Reply NO and nothing is shared.",
+    refused: "You said no. Your details were not shared with any lab.", consentExpired: "No reply, so nothing was shared.",
     prep: "Preparation", bring: "Bring with you", others: "Your other tests", waitingLab: "Waiting for a lab", updated: "Updated", help: "Questions? Contact your hospital.",
   },
 };
@@ -109,7 +113,14 @@ export function StatusView({ token }: { token: string }) {
       )}
 
       {/* current state */}
-      {s.status === "open" && (
+      {s.status === "open" && s.consent_status === "pending_sms" && (
+        <div className="rounded-2xl bg-amber-50 p-4 ring-2 ring-amber-300">
+          <div className="font-semibold">{t.consentAsk}</div>
+          <div className="text-sm">{t.consentHint}</div>
+          <div className="text-sm">{t.keepOriginal(fmtDT(s.original_slot_at), s.from_name)}</div>
+        </div>
+      )}
+      {s.status === "open" && s.consent_status !== "pending_sms" && (
         <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
           <div className="font-semibold">{t.searching}</div>
           <div className="text-sm">{t.keepOriginal(fmtDT(s.original_slot_at), s.from_name)}</div>
@@ -117,7 +128,7 @@ export function StatusView({ token }: { token: string }) {
       )}
       {ended && (
         <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-200">
-          <div className="font-semibold">{s.status === "expired" ? t.noSlot : t.cancelled}</div>
+          <div className="font-semibold">{s.consent_status === "refused" ? t.refused : s.consent_status === "expired" ? t.consentExpired : s.status === "expired" ? t.noSlot : t.cancelled}</div>
           <div>{t.keepOriginal(fmtDT(s.original_slot_at), s.from_name)}</div>
         </div>
       )}

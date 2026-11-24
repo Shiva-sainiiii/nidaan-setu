@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useLive } from "@/lib/useLive";
 import { fmtDT } from "@/lib/format";
-import { Alert, Card, PriorityChip, Stat, StatusChip, btnPrimary } from "@/components/ui";
+import { Alert, Card, ConsentChip, PriorityChip, Stat, StatusChip, btnPrimary } from "@/components/ui";
 import { LiveBadge } from "@/components/LiveBadge";
 import { Icon } from "@/components/Icon";
 
 type Row = {
-  id: number; code: string; status: string; priority: string; on_temp_medication: boolean; test_name: string;
+  id: number; code: string; status: string; priority: string; on_temp_medication: boolean; test_name: string; consent_status: string;
   patient_name: string; phone: string; original_slot_at: string; accepted_slot_at: string | null; lab_name: string | null;
   created_at: string; updated_at: string; bundle_code: string | null; days_saved: number | null; labs_notified: number;
 };
@@ -72,7 +72,10 @@ export function DoctorHome({ hospital }: { hospital: string }) {
                 <td className="px-3 py-2">{r.patient_name}{r.on_temp_medication && <div className="text-xs text-fuchsia-700">temp. medication</div>}</td>
                 <td className="px-3 py-2">{r.test_name}</td>
                 <td className="px-3 py-2"><StatusChip status={r.status} />
-                  {r.status === "open" && <div className="mt-0.5 text-xs text-slate-500">sent to {r.labs_notified} labs</div>}
+                  {r.status === "open" && r.consent_status === "pending_sms"
+                    ? <div className="mt-0.5 text-xs font-semibold text-amber-800">waiting for patient&apos;s YES</div>
+                    : r.status === "open" && <div className="mt-0.5 text-xs text-slate-500">sent to {r.labs_notified} labs</div>}
+                  {(r.consent_status === "refused" || r.consent_status === "expired") && <div className="mt-0.5"><ConsentChip status={r.consent_status} /></div>}
                 </td>
                 <td className="px-3 py-2">{r.lab_name ? <>{r.lab_name}<div className="text-xs text-slate-500">{fmtDT(r.accepted_slot_at)}</div></> : "—"}</td>
                 <td className="px-3 py-2 text-slate-600">{fmtDT(r.original_slot_at)}</td>

@@ -41,6 +41,15 @@ export const STATUS: Record<Status, { en: string; hi: string; cls: string }> = {
   no_show: { en: "No-show", hi: "नहीं पहुँचे", cls: "bg-rose-100 text-rose-900 ring-rose-300" },
 };
 
+/** Consent badge (doctor and patient screens). */
+export const CONSENT: Record<string, { en: string; hi: string; cls: string }> = {
+  verbal: { en: "Consent: verbal", hi: "सहमति: मौखिक", cls: "bg-slate-100 text-slate-700 ring-slate-300" },
+  pending_sms: { en: "Consent: pending SMS", hi: "सहमति: SMS जवाब बाकी", cls: "bg-amber-100 text-amber-900 ring-amber-300" },
+  granted_sms: { en: "Consent: granted via SMS", hi: "सहमति: SMS से मिली", cls: "bg-emerald-100 text-emerald-900 ring-emerald-300" },
+  refused: { en: "Consent: refused", hi: "सहमति: मना किया", cls: "bg-rose-100 text-rose-900 ring-rose-300" },
+  expired: { en: "Consent: no reply (expired)", hi: "सहमति: जवाब नहीं आया", cls: "bg-rose-100 text-rose-900 ring-rose-300" },
+};
+
 export const PRIORITY: Record<string, { label: string; desc: string; cls: string }> = {
   P1: { label: "P1 Urgent", desc: "Treatment decision blocked; risk of harm if delayed", cls: "bg-red-600 text-white" },
   P2: { label: "P2 Soon", desc: "Needed within days; patient symptomatic", cls: "bg-orange-500 text-white" },
@@ -52,6 +61,18 @@ export const ACTION_LABEL: Record<string, string> = {
   consent_recorded: "Patient consent recorded",
   accepted: "Accepted by lab",
   accept_rejected: "Accept rejected (already taken)",
+  consent_requested: "Consent asked by SMS (labs not notified yet)",
+  consent_granted: "Patient said YES: consent given, labs notified",
+  consent_refused: "Patient said NO: request cancelled",
+  consent_expired: "No reply to consent SMS: expired",
+  offer_made: "Lab offered a slot",
+  offer_changed: "Lab changed its offered slot",
+  offer_rejected: "Offer rejected",
+  offer_selected: "Offer window closed: earliest slot chosen",
+  offer_window_closed: "Offer window closed: no offers",
+  bundle_offered: "Lab offered one slot for the bundle",
+  bundle_created: "Bundle created",
+  bundle_accepted: "Bundle booked at one lab",
   original_slot_held: "Original slot kept as backup",
   original_slot_released: "Original slot released to next patient",
   patient_confirmed: "Patient confirmed by SMS",

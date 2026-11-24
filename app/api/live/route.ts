@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { one } from "@/lib/db";
 import { getUser } from "@/lib/session";
 import {
-  auditView, clockOffsetHours, dhoView, doctorView, labView, phoneView, queueView, referralView,
+  auditView, clockOffsetHours, dhoFilter, dhoView, doctorView, labView, phoneView, queueView, referralView,
 } from "@/lib/queries";
 
 // Polling endpoint for every live screen (Supabase Realtime, if configured, just triggers a refetch).
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       break;
     case "dho":
       if (u?.role !== "dho") return forbidden;
-      data = await dhoView();
+      data = await dhoView(dhoFilter(sp));
       break;
     case "phone": // simulated patient phones (demo only)
       data = await phoneView(sp.get("patient"));

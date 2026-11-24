@@ -38,6 +38,7 @@ export type ReferralForm = {
   note: string;
   max_km: number;
   consent: boolean;
+  consent_mode?: "verbal" | "sms"; // sms: patient must reply YES before labs see anything
   wait_days?: number | null;
 };
 
@@ -73,6 +74,22 @@ export async function acceptBundle(bundleId: number, slotLocal: string, idem: st
   if (!u) return denied;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(slotLocal)) return { ok: false, message: "Pick a date and time" };
   return rpc("accept_bundle", [u.id, idem, bundleId, `${slotLocal}:00+05:30`]);
+}
+
+/** During the offer window: offer a slot (the earliest slot wins when the window closes). */
+export async function offerSlot(id: number, slotLocal: string, idem: string): Promise<RpcResult> {
+  const u = await need("lab");
+  if (!u) return denied;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(slotLocal)) return { ok: false, message: "Pick a date and time" };
+  return rpc("offer_slot", [u.id, idem, id, `${slotLocal}:00+05:30`]);
+}
+
+/** Offer one slot for every open test of a bundle this lab can do (one trip). */
+export async function offerBundle(bundleId: number, slotLocal: string, idem: string): Promise<RpcResult> {
+  const u = await need("lab");
+  if (!u) return denied;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(slotLocal)) return { ok: false, message: "Pick a date and time" };
+  return rpc("offer_bundle", [u.id, idem, bundleId, `${slotLocal}:00+05:30`]);
 }
 
 export async function declineReferral(id: number, reason: string, idem: string): Promise<RpcResult> {

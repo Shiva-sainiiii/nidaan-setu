@@ -24,7 +24,7 @@ export async function Header() {
   // If the database is down, still render the header (the login page shows the actual error).
   const [u, offsetH] = await Promise.all([getUser(), clockOffsetHours()]).catch(() => [null, 0] as const);
   return (
-    <header className="no-print sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+    <header className="no-print z-10 sm:sticky sm:top-0 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-20 focus:rounded focus:bg-white focus:px-3 focus:py-2">
         Skip to main content
       </a>

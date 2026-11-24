@@ -51,12 +51,31 @@ The next patient waiting with no date is **Pooja Rani**: she receives the releas
 
 | # | Device | Action | What judges see |
 |---|---|---|---|
-| 1 | Laptop 1: doctor | New referral → **Use demo patient** → tick consent → **Send to 3 labs** | Original slot 14 days away, 3 labs within 25 km (2 free) |
+| 1 | Laptop 1: doctor | New referral → **Use demo patient** → priority **P1 Urgent** → tick consent → **Send to 3 labs** | Original slot 14 days away, 3 labs within 25 km (2 free) |
 | 2 | Laptops 2 + 3: Lab B, Lab C | Request pops up on both (with a beep). Both press **Accept** together | One gets “Accepted”, the other “**Already accepted by …**” |
 | 3 | Phone: `/phone` | Hindi + English SMS arrives; tap **1** | Status link opens `/s/…` in Hindi; shows “confirmed” |
 | 4 | Winning lab, tab **Booked / today** | **Arrived** → **Test done** → **Use sample report** → **Upload & send** | Upload is only possible in the right order |
 | 5 | Laptop 1 | Referral page, then **Hospital queue** | “**Report ready: 14 days earlier**”; original slot moved to Pooja Rani |
 | 6 | Any | **Audit log** | Every action incl. the losing accept and every view of patient data |
+| 7 | Laptop 1 → Labs B, C | New referral for **9876500002** (Sunita, **P2**) → Lab B **Offer slot** +3 days, Lab C **Offer slot** +2 days → Demo controls **+1h** | Doctor page: “**Navjeevan CHC chosen from 2 offers · why: earliest slot: 27 Nov vs 28 Nov**”; Lab B sees “Already accepted by Navjeevan · earliest slot …” |
+
+**Offer window (P2 / P3):** instead of “first click wins”, labs send their **earliest slot** for a short window
+(P2: 1 hour, P3: 4 hours; **P1 has none**, so urgent cases never wait). The window closes early when every notified lab has
+offered or declined. Winner rule, shown on the doctor's page: **whole bundle at one lab (one trip) → earliest slot → nearer →
+free lab → offered first**. No offers in the window → the first lab to press Accept gets it, as before; widening and expiry are unchanged.
+
+| # | Device | Action | What judges see |
+|---|---|---|---|
+| 8 | Laptop 1 → Phone | New referral for **9876500010** (Anil) → Consent **Confirm by SMS** → **Send consent SMS to patient** | Doctor: “Consent: pending SMS”, **no lab sees anything**. Phone: Hindi + English “Reply YES or NO” |
+| 9 | Phone | Tap **YES हाँ** | Labs get the request at once (offer window starts); doctor badge “Consent: granted via SMS” |
+| 10 | Laptop 1 → Phone | Same for **9876500008** (Geeta, untick MRI, tick CT) → tap **NO नहीं** | Request cancelled, nothing shared, “keep your original date” SMS; badge “Consent: refused” |
+| 11 | DHO login | **District dashboard** → map | Hospitals on a district map (no internet needed); circle colour = wait days, size = accepted; arrows = live referrals; tap a lab for details; filter by test and date range |
+
+**Consent by SMS:** the verbal checkbox still works. In SMS mode the patient has 24 hours (demo clock) to reply. YES/HAAN/हाँ grants,
+NO/NAHI/नहीं cancels, anything else gets a polite “please reply YES or NO” and changes nothing. A bundle asks once.
+
+**District map:** inline SVG drawn from the facilities' coordinates (no map tiles, no API key, works offline). New KPIs: average
+days saved, no-show rate, consent-by-SMS replies, lab acceptance rate. All KPIs and the map follow the test and date filters.
 
 **Multi-test bundle (optional extra in the demo):** in *New referral* tick **MRI + CT**. One bundle (e.g. `NS-B501`) is created and the patient gets one SMS.
 Labs that can do both (B, D) see one card with **“Accept all 2 here (one trip)”**; Lab C (MRI only) sees just the MRI, marked “part of bundle”.
@@ -77,6 +96,7 @@ npm run check:demo      # needs the app running + Chrome at /usr/bin/google-chro
 ```
 It presses **Reset demo data**, then plays the whole flow above across 4 simulated devices and prints `PASS`.
 `npm run check:bundle` does the same for the multi-test bundle (MRI + CT, one trip).
+`npm run check:sql` tests the database rules on a throwaway in-memory database (offer window, tie-breaks, bundle preference); it does not touch your data.
 **It resets the demo data**, so run it before you set up the real devices, not during the demo.
 
 ---
@@ -137,7 +157,7 @@ Render: Build command `npm ci && npm run build`, Start command `npm start`, inst
 - **Schema upgrades are automatic:** if the database has an older schema version, the app rebuilds the demo database on startup (synthetic data only).
 
 ```
-db/schema.sql          tables + all tb.* functions (create, accept, transition, report, reply, timers)
+db/schema.sql          tables + all tb.* functions (create, accept, offers, transition, report, reply, timers)
 db/seed.sql            tb.reset_demo(): fictional district, hospitals A–F, tests, queue
 lib/db.ts              PGlite or pg + rpc() helper          lib/queries.ts   read queries per screen
 lib/useLive.ts         polling + realtime hook          app/actions.ts   server actions (all writes)

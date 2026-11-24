@@ -10,7 +10,7 @@ import { BundleCard, ONE_TRIP_BONUS } from "./BundleCard";
 import { TodayCard, type Today } from "./TodayCard";
 import { Icon } from "@/components/Icon";
 
-type Missed = { id: number; code: string; test_type_id: string; priority: string; status: string; response: string | null; winner: string | null; updated_at: string };
+type Missed = { id: number; code: string; test_type_id: string; priority: string; status: string; response: string | null; winner: string | null; updated_at: string; reason: string | null };
 type Done = { id: number; code: string; test_type_id: string; status: string; accepted_slot_at: string; from_name: string; uploaded_at: string | null };
 type Data = { incoming: Incoming[]; missed: Missed[]; today: Today[]; done: Done[] };
 export type Toast = { kind: "success" | "error" | "info"; text: string };
@@ -120,7 +120,8 @@ export function LabDesk({ hospital }: { hospital: string }) {
                   <li key={`${m.id}-${m.status}`} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
                     <b>{m.code}</b> {m.test_type_id} ·
                     {m.response === "declined" ? " You declined" :
-                      m.winner ? <span className="font-semibold text-rose-700">Already accepted by {m.winner}</span> :
+                      m.winner ? <span className="font-semibold text-rose-700">Already accepted by {m.winner}
+                        {m.response === "not_selected" && m.reason && <span className="font-normal text-slate-600"> · {m.reason}</span>}</span> :
                       <StatusChip status={m.status} />}
                   </li>
                 ))}

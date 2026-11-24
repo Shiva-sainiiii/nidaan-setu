@@ -11,7 +11,7 @@ export async function doctorView(u: User) {
             case when r.test_done_at is not null
                  then tb.ist_date(r.original_slot_at) - tb.ist_date(r.test_done_at) end as days_saved,
             (select count(*) from tb.referral_recipients rr where rr.referral_id = r.id)::int as labs_notified,
-            r.bundle_id, b.code as bundle_code
+            r.bundle_id, b.code as bundle_code, r.consent_status
        from tb.referrals r
        left join tb.referral_bundles b on b.id = r.bundle_id
        join tb.patients p on p.id = r.patient_id
@@ -111,7 +111,7 @@ export async function referralView(u: User, id: number) {
     (u.role === "lab" && r.accepted_hospital_id === u.hospital_id);
   if (!allowed) return null;
 
-  const [recipients, audit, report, siblings] = await Promise.all([
+  const [recipients, audit, report, siblings, offers] = await Promise.all([
     q(
       `select rr.hospital_id, h.short_name, rr.distance_km, rr.response, rr.responded_at, rr.round,
               ht.is_free, ht.price_inr
@@ -142,8 +142,14 @@ export async function referralView(u: User, id: number) {
         where me.id = $1 order by s.id`,
       [id],
     ),
+    q(
+      `select o.hospital_id, h.short_name, o.slot_at, o.distance_km, o.is_free, o.status, o.created_at, o.updated_at
+         from tb.referral_offers o join tb.hospitals h on h.id = o.hospital_id
+        where o.referral_id = $1 order by o.slot_at, o.distance_km`,
+      [id],
+    ),
   ]);
-  return { referral: r, recipients, audit, report, siblings };
+  return { referral: r, recipients, audit, report, siblings, offers };
 }
 
 // ---------------------------------------------------------------- lab desk
@@ -154,7 +160,8 @@ export async function labView(u: User) {
               rr.distance_km, rr.round, ht.is_free, ht.price_inr, ht.current_wait_days,
               r.expires_at, r.created_at, a.short_name as from_name,
               tb.score(r.priority, r.on_temp_medication, r.created_at, rr.distance_km) as score,
-              r.bundle_id, b.code as bundle_code,
+              r.bundle_id, b.code as bundle_code, r.offers_close_at,
+              (select slot_at from tb.referral_offers o where o.referral_id = r.id and o.hospital_id = rr.hospital_id) as my_offer_at,
               (select count(*) from tb.referrals r2 where r2.bundle_id = r.bundle_id)::int as bundle_size,
               (select count(*) from tb.referrals r2 where r2.bundle_id = r.bundle_id and r2.status = 'open')::int as bundle_open
          from tb.referral_recipients rr
@@ -163,13 +170,16 @@ export async function labView(u: User) {
          join tb.hospitals a on a.id = r.from_hospital_id
          left join tb.referral_bundles b on b.id = r.bundle_id
          left join tb.hospital_tests ht on ht.hospital_id = rr.hospital_id and ht.test_type_id = r.test_type_id
-        where rr.hospital_id = $1 and r.status = 'open' and rr.response is null and r.expires_at > tb.app_now()
+        where rr.hospital_id = $1 and r.status = 'open' and (rr.response is null or rr.response = 'offered')
+          and r.expires_at > tb.app_now()
+          and r.consent_status in ('verbal', 'granted_sms')   -- never before consent
         order by (tb.score(r.priority, r.on_temp_medication, r.created_at, rr.distance_km)->>'total')::int desc,
                  r.created_at`,
       [u.hospital_id],
     ),
     q(
-      `select r.id, r.code, r.test_type_id, r.priority, r.status, rr.response, h.short_name as winner, r.updated_at
+      `select r.id, r.code, r.test_type_id, r.priority, r.status, rr.response, h.short_name as winner, r.updated_at,
+              r.selection->>'reason' as reason
          from tb.referral_recipients rr
          join tb.referrals r on r.id = rr.referral_id
          left join tb.hospitals h on h.id = r.accepted_hospital_id
@@ -251,7 +261,7 @@ export async function phoneView(patientId: string | null) {
 export async function statusView(token: string) {
   if (!/^[a-f0-9]{32}$/.test(token)) return null;
   return one(
-    `select r.code, r.status, r.priority, r.accepted_slot_at, r.original_slot_at, r.updated_at, r.test_done_at,
+    `select r.code, r.status, r.priority, r.consent_status, r.accepted_slot_at, r.original_slot_at, r.updated_at, r.test_done_at,
             split_part(p.display_name, ' ', 1) as first_name,
             t.name_en as test_en, t.name_hi as test_hi, t.prep_en, t.prep_hi, t.bring_en, t.bring_hi,
             a.name as from_name, d.name as doctor_name,
@@ -288,51 +298,106 @@ export async function auditView(code: string | null) {
   );
 }
 
-export async function dhoView() {
+export type DhoFilter = { test: string | null; days: number | null };
+
+/** Parses ?test=MRI&days=7 (anything unknown → no filter). */
+export function dhoFilter(sp: URLSearchParams): DhoFilter {
+  const test = sp.get("test");
+  const days = Number(sp.get("days"));
+  return {
+    test: test && /^[A-Z]{2,5}$/.test(test) ? test : null,
+    days: [1, 7, 30].includes(days) ? days : null,
+  };
+}
+
+// Filtered referral set used by every DHO number ($1 = test or null, $2 = days or null). Read-only.
+const F = `f as (select * from tb.referrals
+                   where ($1::text is null or test_type_id = $1)
+                     and ($2::int is null or created_at >= tb.app_now() - make_interval(days => $2)))`;
+
+export async function dhoView(filter: DhoFilter = { test: null, days: null }) {
+  const args = [filter.test, filter.days];
   const kpi = await one(
-    `select count(*)::int as sent,
-            (select count(distinct referral_id) from tb.audit_log where action = 'accepted')::int as accepted,
+    `with ${F}
+     select count(*)::int as sent,
+            (select count(distinct a.referral_id) from tb.audit_log a join f on f.id = a.referral_id where a.action = 'accepted')::int as accepted,
             count(*) filter (where test_done_at is not null)::int as tests_done,
             coalesce(percentile_cont(0.5) within group (order by tb.ist_date(original_slot_at) - tb.ist_date(test_done_at))
                      filter (where test_done_at is not null), 0)::float as median_days_saved,
+            coalesce(round(avg(tb.ist_date(original_slot_at) - tb.ist_date(test_done_at)) filter (where test_done_at is not null), 1), 0)::float as avg_days_saved,
             coalesce(sum(tb.ist_date(original_slot_at) - tb.ist_date(test_done_at)) filter (where test_done_at is not null), 0)::int as total_days_saved,
-            (select count(*) from tb.home_queue where status = 'released')::int as slots_released,
+            (select count(*) from tb.home_queue hq where hq.status = 'released'
+                and hq.id in (select original_queue_id from f))::int as slots_released,
             count(*) filter (where status = 'expired')::int as expired,
-            (select count(*) from tb.referral_bundles)::int as bundles,
+            (select count(distinct bundle_id) from f where bundle_id is not null)::int as bundles,
             (select coalesce(sum(n_tests - n_labs), 0) from (
                select count(*) as n_tests, count(distinct accepted_hospital_id) as n_labs
-                 from tb.referrals where bundle_id is not null and accepted_hospital_id is not null group by bundle_id) x)::int as trips_saved,
+                 from f where bundle_id is not null and accepted_hospital_id is not null group by bundle_id) x)::int as trips_saved,
+            (select count(*) from tb.audit_log a join f on f.id = a.referral_id where a.action = 'no_show')::int as no_shows,
+            (select count(*) from tb.audit_log a join f on f.id = a.referral_id where a.action = 'accepted')::int as bookings,
+            count(*) filter (where consent_mode = 'sms')::int as sms_consent,
+            count(*) filter (where consent_status = 'granted_sms')::int as sms_granted,
             count(*) filter (where on_temp_medication and test_done_at is null
                                and status not in ('cancelled','closed')
                                and coalesce(accepted_slot_at, original_slot_at) - created_at > interval '14 days')::int as temp_med_waiting_14d
-       from tb.referrals`,
+       from f`,
+    args,
   );
   const hospitals = await q(
-    `select h.id, h.short_name, h.kind,
-            (select count(*) from tb.referrals r where r.from_hospital_id = h.id)::int as sent,
-            (select count(*) from tb.referral_recipients rr where rr.hospital_id = h.id)::int as received,
-            (select count(*) from tb.referral_recipients rr where rr.hospital_id = h.id and rr.response = 'accepted')::int as accepted,
-            (select count(*) from tb.referral_recipients rr where rr.hospital_id = h.id and rr.response = 'declined')::int as declined,
-            (select count(*) from tb.referrals r where r.accepted_hospital_id = h.id and r.test_done_at is not null)::int as tests_done
+    `with ${F}
+     select h.id, h.name, h.short_name, h.kind, h.lat, h.lng,
+            (select count(*) from f where f.from_hospital_id = h.id)::int as sent,
+            (select count(*) from tb.referral_recipients rr join f on f.id = rr.referral_id where rr.hospital_id = h.id)::int as received,
+            (select count(*) from tb.referral_recipients rr join f on f.id = rr.referral_id where rr.hospital_id = h.id and rr.response = 'accepted')::int as accepted,
+            (select count(*) from tb.referral_recipients rr join f on f.id = rr.referral_id where rr.hospital_id = h.id and rr.response = 'declined')::int as declined,
+            (select count(*) from tb.referral_offers o join f on f.id = o.referral_id where o.hospital_id = h.id)::int as offers,
+            (select count(*) from f where f.accepted_hospital_id = h.id and f.test_done_at is not null)::int as tests_done,
+            (select count(*) from f where f.accepted_hospital_id = h.id and tb.ist_date(f.accepted_at) = tb.ist_date(tb.app_now()))::int as accepted_today,
+            (select count(*) from f where f.accepted_hospital_id = h.id and tb.ist_date(f.test_done_at) = tb.ist_date(tb.app_now()))::int as done_today,
+            (select count(*) from tb.audit_log a join f on f.id = a.referral_id where a.action = 'no_show' and a.actor_hospital_id = h.id)::int as no_shows,
+            (select round(avg(extract(epoch from (f.accepted_at - coalesce(f.consent_answered_at, f.created_at))) / 60)::numeric, 0)
+               from f where f.accepted_hospital_id = h.id and f.accepted_at is not null)::int as avg_accept_min,
+            (select round(avg(ht.current_wait_days)::numeric, 1) from tb.hospital_tests ht
+              where ht.hospital_id = h.id and ($1::text is null or ht.test_type_id = $1))::float as wait_days,
+            (select coalesce(jsonb_agg(jsonb_build_object('test', ht.test_type_id, 'is_free', ht.is_free, 'price_inr', ht.price_inr,
+                                                          'wait', ht.current_wait_days) order by ht.test_type_id), '[]')
+               from tb.hospital_tests ht where ht.hospital_id = h.id) as tests,
+            exists (select 1 from tb.hospital_tests ht where ht.hospital_id = h.id and ($1::text is null or ht.test_type_id = $1)) as offers_test,
+            exists (select 1 from tb.demo_users d where d.hospital_id = h.id and d.role = 'doctor') as is_referrer
        from tb.hospitals h order by h.id`,
+    args,
+  );
+  // Live arrows: referrals booked and not yet closed (accepted … report_sent), grouped per route.
+  const flows = await q(
+    `with ${F}
+     select f.from_hospital_id as "from", f.accepted_hospital_id as "to", count(*)::int as n,
+            string_agg(f.code || ' ' || f.test_type_id, ', ' order by f.id) as codes
+       from f where f.status in ('accepted','patient_confirmed','arrived','test_done','report_sent')
+      group by 1, 2`,
+    args,
   );
   const doctors = await q(
-    `select d.name, h.short_name, count(r.*)::int as referrals,
-            count(r.*) filter (where r.priority = 'P1')::int as p1,
-            count(r.*) filter (where r.on_temp_medication)::int as temp_med
+    `with ${F}
+     select d.name, h.short_name, count(f.id)::int as referrals,
+            count(f.id) filter (where f.priority = 'P1')::int as p1,
+            count(f.id) filter (where f.on_temp_medication)::int as temp_med
        from tb.demo_users d join tb.hospitals h on h.id = d.hospital_id
-       left join tb.referrals r on r.doctor_id = d.id
+       left join f on f.doctor_id = d.id
       where d.role = 'doctor' group by d.name, h.short_name`,
+    args,
   );
   const waiting = await q(
-    `select r.code, t.name_en as test, a.short_name as from_name, r.priority, r.status, r.created_at,
-            coalesce(r.accepted_slot_at, r.original_slot_at) as expected_at
-       from tb.referrals r join tb.test_types t on t.id = r.test_type_id join tb.hospitals a on a.id = r.from_hospital_id
-      where r.on_temp_medication and r.test_done_at is null and r.status not in ('cancelled','closed')
-        and coalesce(r.accepted_slot_at, r.original_slot_at) - r.created_at > interval '14 days'
-      order by r.created_at`,
+    `with ${F}
+     select f.code, t.name_en as test, a.short_name as from_name, f.priority, f.status, f.created_at,
+            coalesce(f.accepted_slot_at, f.original_slot_at) as expected_at
+       from f join tb.test_types t on t.id = f.test_type_id join tb.hospitals a on a.id = f.from_hospital_id
+      where f.on_temp_medication and f.test_done_at is null and f.status not in ('cancelled','closed')
+        and coalesce(f.accepted_slot_at, f.original_slot_at) - f.created_at > interval '14 days'
+      order by f.created_at`,
+    args,
   );
-  return { kpi, hospitals, doctors, waiting };
+  const tests = await q(`select id, name_en, name_hi from tb.test_types order by id = 'MRI' desc, id`);
+  return { kpi, hospitals, flows, doctors, waiting, tests, filter };
 }
 
 export async function clockOffsetHours(): Promise<number> {

@@ -11,7 +11,8 @@
     "start:lan": "next build && next start -H 0.0.0.0 -p 3000",
     "db:reset": "node scripts/db-setup.mjs",
     "db:docker": "docker start nidaan-setu-db || docker run -d --name nidaan-setu-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=nidaansetu -p 54329:5432 postgres:16-alpine",
-    "check:bundle": "node scripts/bundle-check.mjs"
+    "check:bundle": "node scripts/bundle-check.mjs",
+    "check:sql": "node scripts/sql-check.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.6.0",

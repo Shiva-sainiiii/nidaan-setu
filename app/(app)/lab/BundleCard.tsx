@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { acceptBundle, acceptReferral } from "@/app/actions";
+import { acceptBundle, acceptReferral, offerBundle, offerSlot } from "@/app/actions";
 import { useIdemKey } from "@/lib/useLive";
 import { relTime } from "@/lib/format";
 import { Card, PriorityChip, ScoreBreakdown, TempMedBadge, btnPrimary, btnSecondary, input } from "@/components/ui";
-import { tomorrow10, type Incoming } from "./IncomingCard";
+import { OfferWindowNote, tomorrow10, windowOpen, type Incoming } from "./IncomingCard";
 import type { Toast } from "./LabDesk";
 import { Icon } from "@/components/Icon";
 
@@ -41,6 +41,18 @@ export function BundleCard({ items, serverNow, onResult }: { items: Incoming[]; 
   const acceptOne = (it: Incoming) =>
     run(() => acceptReferral(it.id, slot, idem), () => `Accepted ${it.code} (${it.test_name}) only.`);
 
+  // Offer window (P2/P3): send one slot for all tests; a lab that can do the whole bundle is preferred.
+  const offering = windowOpen(first, serverNow);
+  const offered = items.some((it) => it.my_offer_at);
+  const selText = (r: Record<string, unknown>) => {
+    const sel = (r.selection as { selected?: { winner: string; reason: string }[] } | null)?.selected?.[0];
+    return sel ? ` All labs answered: ${sel.winner} chosen (${sel.reason}).` : " The best offer wins when the window closes (whole bundle at one lab first, then earliest slot).";
+  };
+  const offerAll = () =>
+    run(() => offerBundle(first.bundle_id!, slot, idem), (r) => `Offered ${((r.offered as string[]) ?? []).join(" + ")} at ${r.slot as string}.${selText(r)}`);
+  const offerOne = (it: Incoming) =>
+    run(() => offerSlot(it.id, slot, idem), (r) => `Offered ${it.code} (${it.test_name}) only at ${r.slot as string}.${selText(r)}`);
+
   return (
     <Card className={`border-2 ${allHere ? "border-emerald-300" : "border-slate-200"} ${isNew ? "flash-in" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -63,8 +75,9 @@ export function BundleCard({ items, serverNow, onResult }: { items: Incoming[]; 
             </div>
           )}
           <div className="text-sm text-slate-600">
-            from {first.from_name} · <b>{first.distance_km} km</b> for the patient · offer closes {relTime(first.expires_at, serverNow)}
+            from {first.from_name} · <b>{first.distance_km} km</b> for the patient · request closes {relTime(first.expires_at, serverNow)}
           </div>
+          <OfferWindowNote r={first} serverNow={serverNow} />
           {first.note && <div className="text-sm text-slate-800">“{first.note}”</div>}
           <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
             {items.map((it) => (
@@ -75,19 +88,27 @@ export function BundleCard({ items, serverNow, onResult }: { items: Incoming[]; 
                   </div>
                   <ScoreBreakdown score={it.score} />
                 </div>
-                <button className={`${btnSecondary}`} disabled={pending} onClick={() => acceptOne(it)}>Accept only this</button>
+                <button className={`${btnSecondary}`} disabled={pending} onClick={() => (offering ? offerOne(it) : acceptOne(it))}>
+                  {offering ? "Offer only this" : "Accept only this"}
+                </button>
               </li>
             ))}
           </ul>
-          <div className="text-xs text-slate-500">Patient identity is shared only after you accept.</div>
+          <div className="text-xs text-slate-500">Patient identity is shared only after you are booked.</div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-64">
           <label className="text-xs text-slate-600">One slot for all (IST)
             <input type="datetime-local" className={input} value={slot} onChange={(e) => setSlot(e.target.value)} />
           </label>
-          <button className={btnPrimary} disabled={pending} onClick={acceptAll}>
-            {pending ? "Accepting…" : `Accept all ${items.length} here (one trip)`}
-          </button>
+          {offering ? (
+            <button className={btnPrimary} disabled={pending} onClick={offerAll}>
+              {pending ? "Sending…" : `${offered ? "Update offer" : "Offer"} all ${items.length} here (one trip)`}
+            </button>
+          ) : (
+            <button className={btnPrimary} disabled={pending} onClick={acceptAll}>
+              {pending ? "Accepting…" : `Accept all ${items.length} here (one trip)`}
+            </button>
+          )}
         </div>
       </div>
     </Card>
