@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { q } from "@/lib/db";
+import { q, isDemoMode } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function GET() {
   }
   try {
     const r = await q<{ n: number }>("select count(*)::int as n from tb.demo_users");
-    return NextResponse.json({ ok: true, hasUrl, host, users: r[0]?.n });
+    return NextResponse.json({ ok: true, demoMode: await isDemoMode(), hasUrl, host, users: r[0]?.n });
   } catch (e) {
     return NextResponse.json({
       ok: false,
