@@ -18,6 +18,7 @@ export const pool =
 g.__tbPool = pool;
 
 export async function q<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+  if (!url) throw new Error("DATABASE_URL is not set in this environment (Vercel > Settings > Environment Variables, then redeploy)");
   const res = await pool.query(sql, params);
   return res.rows as T[];
 }
