@@ -10,18 +10,19 @@ import { Alert, Card, btnPrimary, btnSecondary, input } from "@/components/ui";
 
 type Test = { id: string; name_en: string; current_wait_days: number | null };
 type Lookup = Awaited<ReturnType<typeof lookupPatientAction>>;
-type Lab = { id: string; short_name: string; kind: string; is_free: boolean; price_inr: number | null; current_wait_days: number; distance_km: number };
+type LabTest = { test: string; is_free: boolean; price_inr: number | null; wait: number };
+type Lab = { id: string; short_name: string; kind: string; distance_km: number; n: number; tests: LabTest[] };
 
 const DEMO_PATIENT = { phone: "9876500001", note: "Low back pain radiating to left leg for 3 weeks. Suspected disc prolapse. On analgesics." };
 const CONSENT_SCRIPT =
-  "I explained to the patient (in Hindi/English) that their mobile number, test name and a short note will be shared with a partner lab to get an earlier slot, and they agreed.";
+  "I explained to the patient (in Hindi/English) that their mobile number, test names and a short note will be shared with partner labs to get earlier slots, and they agreed.";
 
-export function NewReferralForm({ tests }: { tests: Test[] }) {
+export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [abha, setAbha] = useState("");
-  const [test, setTest] = useState(tests[0]?.id ?? "MRI");
+  const [tests, setTests] = useState<string[]>([allTests[0]?.id ?? "MRI"]);
   const [priority, setPriority] = useState<"P1" | "P2" | "P3">("P2");
   const [tempMed, setTempMed] = useState(false);
   const [note, setNote] = useState("");
@@ -30,27 +31,35 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
   const [waitDays, setWaitDays] = useState<number | "">("");
   const [lookup, setLookup] = useState<Lookup>(null);
   const [labs, setLabs] = useState<Lab[]>([]);
-  const [error, setError] = useState<{ msg: string; code?: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [idem, rotateIdem] = useIdemKey();
 
   const digits = phone.replace(/\D/g, "").slice(-10);
-  const testInfo = tests.find((t) => t.id === test);
+  const testsKey = [...tests].sort().join(",");
+  const single = tests.length === 1;
+  const name_of = (id: string) => allTests.find((t) => t.id === id)?.name_en ?? id;
 
   useEffect(() => {
     let live = true;
-    (digits.length === 10 ? lookupPatientAction(digits, test) : Promise.resolve(null)).then((r) => live && setLookup(r));
+    const list = testsKey ? testsKey.split(",") : [];
+    (digits.length === 10 && list.length ? lookupPatientAction(digits, list) : Promise.resolve(null)).then((r) => live && setLookup(r));
     return () => { live = false; };
-  }, [digits, test]);
+  }, [digits, testsKey]);
 
   useEffect(() => {
     let live = true;
-    previewLabsAction(test, maxKm).then((r) => live && setLabs(r as Lab[]));
+    previewLabsAction(testsKey ? testsKey.split(",") : [], maxKm).then((r) => live && setLabs(r as Lab[]));
     return () => { live = false; };
-  }, [test, maxKm]);
+  }, [testsKey, maxKm]);
 
+  const toggle = (id: string) => setTests((cur) => (cur.includes(id) ? cur.filter((t) => t !== id) : [...cur, id]));
+  const slotFor = (t: string) => lookup?.slots.find((s) => s.test === t);
   const isNew = digits.length === 10 && lookup && !lookup.patient;
-  const needsWait = digits.length === 10 && lookup && !lookup.slot;
+  const needsWait = single && digits.length === 10 && lookup && !slotFor(tests[0]);
+  const oneTrip = labs.filter((l) => l.n === tests.length);
+  const covered = new Set(labs.flatMap((l) => l.tests.map((t) => t.test)));
+  const uncovered = tests.filter((t) => !covered.has(t));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,16 +68,16 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
       try {
         const res = await createReferral(
           {
-            phone: digits, name, abha, test, priority, temp_med: tempMed, note, max_km: maxKm, consent,
-            wait_days: needsWait ? Number(waitDays || testInfo?.current_wait_days || 0) : null,
+            phone: digits, name, abha, tests, priority, temp_med: tempMed, note, max_km: maxKm, consent,
+            wait_days: needsWait ? Number(waitDays || allTests.find((t) => t.id === tests[0])?.current_wait_days || 0) : null,
           },
           idem,
         );
         rotateIdem(); // definitive answer: a corrected resubmit must use a fresh key
         if (res.ok) router.push(`/r/${res.id}`);
-        else setError({ msg: res.message ?? "Could not create referral", code: res.code as string | undefined });
+        else setError(res.message ?? "Could not create referral");
       } catch {
-        setError({ msg: "Network problem. Press Send again; it will not create a duplicate." }); // same key kept
+        setError("Network problem. Press Send again; it will not create a duplicate."); // same key kept
       }
     });
   }
@@ -79,7 +88,7 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">1. Patient</h2>
           <button type="button" className="text-xs text-teal-700 underline"
-            onClick={() => { setPhone(DEMO_PATIENT.phone); setNote(DEMO_PATIENT.note); setTempMed(true); setTest("MRI"); }}>
+            onClick={() => { setPhone(DEMO_PATIENT.phone); setNote(DEMO_PATIENT.note); setTempMed(true); setTests(["MRI"]); }}>
             Use demo patient (Ramesh Kumar)
           </button>
         </div>
@@ -95,14 +104,28 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
         {lookup?.patient && (
           <Alert kind="info">
             <b>{lookup.patient.display_name}</b>{lookup.patient.age ? `, ${lookup.patient.age}` : ""}
-            {lookup.slot
-              ? <> · Original slot in your queue: <b>{fmtDT(lookup.slot.slot_at)}</b> (position {lookup.slot.position}). It stays as a backup until the test is done.</>
-              : <> · No slot in your {test} queue.</>}
+            <ul className="mt-1 space-y-0.5">
+              {tests.map((t) => {
+                const s = slotFor(t);
+                const w = allTests.find((x) => x.id === t)?.current_wait_days;
+                return (
+                  <li key={t}>
+                    {name_of(t)}:{" "}
+                    {s ? <>original slot in your queue <b>{fmtDT(s.slot_at)}</b> (position {s.position}), kept as backup</>
+                       : <>no slot in your queue{!single && w != null ? <> (uses your current wait, {w} days)</> : ""}</>}
+                  </li>
+                );
+              })}
+            </ul>
           </Alert>
         )}
-        {lookup?.active && (
+        {(lookup?.active.length ?? 0) > 0 && (
           <Alert kind="warn">
-            Already has an active referral for this test: <Link className="underline" href={`/r/${lookup.active.id}`}>{lookup.active.code}</Link>
+            Already has an active referral for{" "}
+            {lookup!.active.map((a, i) => (
+              <span key={a.id}>{i > 0 && ", "}{name_of(a.test)} (<Link className="underline" href={`/r/${a.id}`}>{a.code}</Link>)</span>
+            ))}
+            . Untick it to continue.
           </Alert>
         )}
         {isNew && (
@@ -113,24 +136,29 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="font-semibold">2. Test and urgency</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm">Test
-            <select className={input} value={test} onChange={(e) => setTest(e.target.value)}>
-              {tests.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name_en}{t.current_wait_days != null ? ` (your queue: ${t.current_wait_days} days)` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          {needsWait && (
-            <label className="text-sm">Current wait at your hospital (days)
-              <input className={input} type="number" min={1} max={120} placeholder={String(testInfo?.current_wait_days ?? "")}
-                value={waitDays} onChange={(e) => setWaitDays(e.target.value ? Number(e.target.value) : "")} />
-            </label>
+        <h2 className="font-semibold">2. Tests and urgency</h2>
+        <div>
+          <div className="mb-1 text-sm">Tests ordered <span className="text-slate-500">(tick all that apply: we try to book them together, one trip)</span></div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {allTests.map((t) => (
+              <label key={t.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm ${tests.includes(t.id) ? "border-teal-600 bg-teal-50" : "border-slate-300 bg-white"}`}>
+                <input type="checkbox" checked={tests.includes(t.id)} onChange={() => toggle(t.id)} />
+                <span className="font-medium">{t.name_en}</span>
+                {t.current_wait_days != null && <span className="ml-auto text-xs text-slate-500">your queue: {t.current_wait_days} d</span>}
+              </label>
+            ))}
+          </div>
+          {tests.length > 1 && (
+            <p className="mt-1 text-xs text-teal-800">{tests.length} tests → one bundle for this patient. One SMS; labs that can do all of them are shown first.</p>
           )}
         </div>
+        {needsWait && (
+          <label className="block max-w-xs text-sm">Current wait at your hospital (days)
+            <input className={input} type="number" min={1} max={120}
+              placeholder={String(allTests.find((t) => t.id === tests[0])?.current_wait_days ?? "")}
+              value={waitDays} onChange={(e) => setWaitDays(e.target.value ? Number(e.target.value) : "")} />
+          </label>
+        )}
         <div>
           <div className="mb-1 text-sm">Priority (set by doctor, visible to every lab, audited)</div>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -145,7 +173,7 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={tempMed} onChange={(e) => setTempMed(e.target.checked)} />
-          Patient is on <b>temporary medication</b> (e.g. painkillers) while waiting for this test
+          Patient is on <b>temporary medication</b> (e.g. painkillers) while waiting for these tests
         </label>
         <label className="block text-sm">Short clinical note for the lab ({280 - note.length} left)
           <textarea className={input} rows={2} maxLength={280} value={note} onChange={(e) => setNote(e.target.value)}
@@ -159,19 +187,27 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
           <input type="range" min={5} max={60} step={5} value={maxKm} onChange={(e) => setMaxKm(Number(e.target.value))} className="w-full accent-teal-700" />
         </label>
         <div className="text-sm">
-          <b>{labs.length}</b> partner lab{labs.length === 1 ? "" : "s"} within {maxKm} km offer this test
-          {labs.length > 0 && <> ({labs.filter((l) => l.is_free).length} free)</>}:
+          <b>{labs.length}</b> partner lab{labs.length === 1 ? "" : "s"} within {maxKm} km
+          {tests.length > 1 && <> · <b className="text-emerald-700">{oneTrip.length}</b> can do all {tests.length} tests in one trip</>}:
           <ul className="mt-1 divide-y divide-slate-100 rounded-lg border border-slate-200">
             {labs.map((l) => (
-              <li key={l.id} className="flex justify-between px-3 py-1.5">
-                <span>{l.short_name}</span>
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5">
+                <span>
+                  {l.short_name}
+                  {tests.length > 1 && l.n === tests.length && (
+                    <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-semibold text-emerald-800">all {l.n} tests, one trip</span>
+                  )}
+                </span>
                 <span className="text-slate-500">
-                  {l.distance_km} km · {l.is_free ? "Free (govt)" : `₹${l.price_inr} (PPP)`} · ~{l.current_wait_days}d wait
+                  {l.distance_km} km · {l.tests.map((t) => `${t.test} ${t.is_free ? "free" : `₹${t.price_inr}`} ~${t.wait}d`).join(" · ")}
                 </span>
               </li>
             ))}
             {labs.length === 0 && <li className="px-3 py-2 text-slate-500">None: widen the distance.</li>}
           </ul>
+          {uncovered.length > 0 && labs.length > 0 && (
+            <p className="mt-1 text-xs text-amber-700">No lab within {maxKm} km offers {uncovered.map(name_of).join(", ")}. Widen the distance or untick it.</p>
+          )}
         </div>
       </Card>
 
@@ -183,15 +219,10 @@ export function NewReferralForm({ tests }: { tests: Test[] }) {
         </label>
       </Card>
 
-      {error && (
-        <Alert kind="error">
-          {error.msg}
-          {error.code && lookup?.active && <> · <Link className="underline" href={`/r/${lookup.active.id}`}>Open {error.code}</Link></>}
-        </Alert>
-      )}
+      {error && <Alert kind="error">{error}</Alert>}
       <div className="flex gap-2">
-        <button className={btnPrimary} disabled={pending || !consent || labs.length === 0}>
-          {pending ? "Sending…" : `Send to ${labs.length} lab${labs.length === 1 ? "" : "s"}`}
+        <button className={btnPrimary} disabled={pending || !consent || tests.length === 0 || labs.length === 0 || uncovered.length > 0}>
+          {pending ? "Sending…" : tests.length > 1 ? `Send ${tests.length} tests to ${labs.length} labs` : `Send to ${labs.length} lab${labs.length === 1 ? "" : "s"}`}
         </button>
         <Link href="/doctor" className={btnSecondary}>Cancel</Link>
       </div>

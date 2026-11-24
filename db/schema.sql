@@ -82,10 +82,22 @@ create table tb.home_queue (
 );
 
 create sequence tb.ref_code_seq start 1001;
+create sequence tb.bundle_code_seq start 501;
+
+-- Several tests ordered together for one patient (one prescription). Each test is still its own referral.
+create table tb.referral_bundles (
+  id bigserial primary key,
+  code text not null unique default ('TB-B' || nextval('tb.bundle_code_seq')),
+  patient_id text references tb.patients(id),
+  from_hospital_id text not null references tb.hospitals(id),
+  doctor_id text not null references tb.demo_users(id),
+  created_at timestamptz not null
+);
 
 create table tb.referrals (
   id bigserial primary key,
   code text not null unique default ('TB-' || nextval('tb.ref_code_seq')),
+  bundle_id bigint references tb.referral_bundles(id),
   patient_id text not null references tb.patients(id),
   from_hospital_id text not null references tb.hospitals(id),
   doctor_id text not null references tb.demo_users(id),
@@ -370,11 +382,12 @@ begin
   begin
     insert into tb.referrals (patient_id, from_hospital_id, doctor_id, test_type_id, priority,
       on_temp_medication, note, consent_recorded, max_distance_km, original_queue_id, original_slot_at,
-      expires_at, created_at, updated_at)
+      expires_at, created_at, updated_at, bundle_id)
     values (pat.id, u.hospital_id, u.id, p->>'test', p->>'priority',
       coalesce((p->>'temp_med')::boolean, false), coalesce(p->>'note', ''), true,
       coalesce(nullif(p->>'max_km', '')::int, 25), hq.id, v_orig,
-      tb.app_now() + tb.offer_window(p->>'priority'), tb.app_now(), tb.app_now())
+      tb.app_now() + tb.offer_window(p->>'priority'), tb.app_now(), tb.app_now(),
+      nullif(p->>'bundle_id', '')::bigint)
     returning * into r;
   exception when unique_violation then
     select code into v_existing from tb.referrals
@@ -394,18 +407,20 @@ begin
     'max_km', r.max_distance_km, 'labs_notified', n,
     'original_slot', tb.fmt_ts(r.original_slot_at)), p_idem);
 
-  perform tb.send_msg(pat.id, r.id, 'created:' || r.code,
-    'TestBridge: डॉक्टर ने आपकी ' || (select name_hi from tb.test_types where id = r.test_type_id) ||
-      ' जाँच के लिए जल्दी की तारीख माँगी है। तारीख तय होते ही SMS आएगा। आपकी पुरानी तारीख ' ||
-      tb.fmt_ts(r.original_slot_at) || ' सुरक्षित है।',
-    'TestBridge: Your doctor has requested an earlier ' || r.test_type_id ||
-      ' slot. We will SMS you when it is booked. Your original date ' || tb.fmt_ts(r.original_slot_at) || ' is kept.');
+  if r.bundle_id is null then  -- bundled tests get one combined SMS from tb.create_bundle
+    perform tb.send_msg(pat.id, r.id, 'created:' || r.code,
+      'TestBridge: डॉक्टर ने आपकी ' || (select name_hi from tb.test_types where id = r.test_type_id) ||
+        ' जाँच के लिए जल्दी की तारीख माँगी है। तारीख तय होते ही SMS आएगा। आपकी पुरानी तारीख ' ||
+        tb.fmt_ts(r.original_slot_at) || ' सुरक्षित है।',
+      'TestBridge: Your doctor has requested an earlier ' || r.test_type_id ||
+        ' slot. We will SMS you when it is booked. Your original date ' || tb.fmt_ts(r.original_slot_at) || ' is kept.');
+  end if;
 
   return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'id', r.id, 'code', r.code, 'labs_notified', n));
 end $$;
 
 -- ---------------------------------------------------------------- accept (atomic)
-create function tb.accept_referral(p_actor text, p_idem text, p_ref bigint, p_slot timestamptz)
+create function tb.accept_referral(p_actor text, p_idem text, p_ref bigint, p_slot timestamptz, p_quiet boolean default false)
 returns jsonb language plpgsql as $$
 declare
   v jsonb;
@@ -478,11 +493,13 @@ begin
       jsonb_build_object('slot', tb.fmt_ts(r.original_slot_at), 'note', 'kept as backup until test is done'), p_idem);
   end if;
 
-  perform tb.send_msg(r.patient_id, r.id, 'accept:' || r.code || ':' || r.version,
-    'TestBridge: आपकी ' || t.name_hi || ' जाँच ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
-      ' पर तय है। टोकन ' || r.code || '। ' || t.sms_prep_hi || ' पुष्टि के लिए 1 भेजें। /s/' || r.patient_token,
-    'TestBridge: Your ' || t.name_en || ' is booked at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
-      '. Token ' || r.code || '. ' || t.sms_prep_en || ' Reply 1 to confirm. /s/' || r.patient_token);
+  if not p_quiet then
+    perform tb.send_msg(r.patient_id, r.id, 'accept:' || r.code || ':' || r.version,
+      'TestBridge: आपकी ' || t.name_hi || ' जाँच ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
+        ' पर तय है। टोकन ' || r.code || '। ' || t.sms_prep_hi || ' पुष्टि के लिए 1 भेजें। /s/' || r.patient_token,
+      'TestBridge: Your ' || t.name_en || ' is booked at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
+        '. Token ' || r.code || '. ' || t.sms_prep_en || ' Reply 1 to confirm. /s/' || r.patient_token);
+  end if;
 
   return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'code', r.code, 'lab', h.short_name));
 end $$;
@@ -652,7 +669,7 @@ end $$;
 -- ---------------------------------------------------------------- patient SMS reply
 create function tb.patient_reply(p_patient text, p_idem text, p_body text) returns jsonb
 language plpgsql as $$
-declare v jsonb; r tb.referrals; body text := lower(trim(coalesce(p_body, '')));
+declare v jsonb; r tb.referrals; n int := 0; body text := lower(trim(coalesce(p_body, '')));
 begin
   v := tb.idem_begin(p_idem, 'patient:' || p_patient, 'patient_reply');
   if v is not null then return v; end if;
@@ -661,18 +678,21 @@ begin
   values (p_patient, 'in', trim(p_body), 'in:' || p_idem, tb.app_now());
 
   if body in ('1', 'yes', 'y', 'ok', 'haan', 'ha', 'हाँ', 'हां') then
-    update tb.referrals set status = 'patient_confirmed', version = version + 1, updated_at = tb.app_now()
-     where id = (select id from tb.referrals where patient_id = p_patient and status = 'accepted'
-                 order by accepted_at desc limit 1)
-       and status = 'accepted'
-    returning * into r;
-    if found then
+    -- confirms every booked test of this patient (a bundle is one trip, one reply)
+    for r in
+      update tb.referrals set status = 'patient_confirmed', version = version + 1, updated_at = tb.app_now()
+       where patient_id = p_patient and status = 'accepted'
+      returning *
+    loop
+      n := n + 1;
       perform tb.audit(null, r.id, 'patient_confirmed', 'accepted', 'patient_confirmed',
         jsonb_build_object('via', 'SMS reply'), p_idem, 'patient');
+    end loop;
+    if n > 0 then
       perform tb.send_msg(p_patient, r.id, 'reply:' || p_idem,
-        'TestBridge: धन्यवाद, आपकी जाँच ' || tb.fmt_ts(r.accepted_slot_at) || ' के लिए पक्की है।',
-        'TestBridge: Thank you, your test on ' || tb.fmt_ts(r.accepted_slot_at) || ' is confirmed.');
-      return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'confirmed', r.code));
+        'TestBridge: धन्यवाद, आपकी ' || n || ' जाँच ' || tb.fmt_ts(r.accepted_slot_at) || ' के लिए पक्की है।',
+        'TestBridge: Thank you, your ' || case when n = 1 then 'test' else n || ' tests' end || ' on ' || tb.fmt_ts(r.accepted_slot_at) || ' ' || case when n = 1 then 'is' else 'are' end || ' confirmed.');
+      return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'confirmed', n));
     end if;
   end if;
 
@@ -743,3 +763,124 @@ end $$;
 create function tb.log_view(p_actor text, p_ref bigint, p_what text) returns void language sql as $$
   select tb.audit(p_actor, p_ref, 'viewed_' || p_what, null, null, '{}')
 $$;
+
+-- ---------------------------------------------------------------- bundles (several tests, one patient)
+-- All-or-nothing: if any test cannot be referred (e.g. already active), nothing is created.
+create function tb.create_bundle(p_actor text, p_idem text, p jsonb) returns jsonb language plpgsql as $$
+declare
+  v jsonb; u tb.demo_users; tests text[]; t text; b tb.referral_bundles; res jsonb;
+  ids bigint[] := '{}'; codes text[] := '{}'; first_ref tb.referrals; wait int; names_en text; names_hi text;
+begin
+  v := tb.idem_begin(p_idem, p_actor, 'create_bundle');
+  if v is not null then return v; end if;
+  tests := array(select distinct x from jsonb_array_elements_text(coalesce(p->'tests', '[]'::jsonb)) x order by 1);
+  if cardinality(tests) = 0 then
+    return tb.fail(p_idem, 'no_tests', 'Select at least one test');
+  end if;
+  if cardinality(tests) = 1 then  -- single test: plain referral
+    return tb.idem_end(p_idem, tb.create_referral(p_actor, p_idem || ':1', (p - 'tests') || jsonb_build_object('test', tests[1])));
+  end if;
+  select * into u from tb.demo_users where id = p_actor;
+  if u.role is distinct from 'doctor' then
+    return tb.fail(p_idem, 'forbidden', 'Only a referring doctor can create a referral');
+  end if;
+
+  begin  -- subtransaction: any failure undoes every test of the bundle
+    insert into tb.referral_bundles (from_hospital_id, doctor_id, created_at)
+    values (u.hospital_id, u.id, tb.app_now()) returning * into b;
+    foreach t in array tests loop
+      select current_wait_days into wait from tb.hospital_tests where hospital_id = u.hospital_id and test_type_id = t;
+      res := tb.create_referral(p_actor, p_idem || ':' || t,
+        (p - 'tests') || jsonb_build_object('test', t, 'bundle_id', b.id,
+                                            'wait_days', coalesce(nullif(p->>'wait_days', '')::int, wait, 14)));
+      if not (res->>'ok')::boolean then
+        raise exception using errcode = 'P0001', message = t || ': ' || coalesce(res->>'message', 'failed'), detail = res::text;
+      end if;
+      ids := ids || (res->>'id')::bigint;
+      codes := codes || (res->>'code');
+    end loop;
+  exception when sqlstate 'P0001' then
+    return tb.fail(p_idem, 'bundle_failed', 'Nothing was sent. ' || sqlerrm);
+  end;
+
+  select * into first_ref from tb.referrals where id = ids[1];
+  update tb.referral_bundles set patient_id = first_ref.patient_id where id = b.id;
+  select string_agg(name_en, ', ' order by id), string_agg(name_hi, ', ' order by id) into names_en, names_hi
+    from tb.test_types where id = any(tests);
+  perform tb.audit(p_actor, ids[1], 'bundle_created', null, null,
+    jsonb_build_object('bundle', b.code, 'tests', array_to_string(tests, ', '), 'referrals', array_to_string(codes, ', ')), p_idem);
+  perform tb.send_msg(first_ref.patient_id, ids[1], 'bundle-created:' || b.code,
+    'TestBridge: डॉक्टर ने आपकी ' || cardinality(tests) || ' जाँचों (' || names_hi || ') के लिए जल्दी की तारीख माँगी है। ' ||
+      'कोशिश रहेगी कि सब एक ही जगह, एक ही बार में हो जाएँ। आपकी पुरानी तारीखें सुरक्षित हैं।',
+    'TestBridge: Your doctor requested earlier slots for ' || cardinality(tests) || ' tests (' || names_en || '). ' ||
+      'We try to book them together in one trip. Your original dates are kept.');
+  return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'id', ids[1], 'bundle_id', b.id, 'bundle_code', b.code,
+    'ids', to_jsonb(ids), 'codes', to_jsonb(codes), 'code', b.code));
+end $$;
+
+-- A lab accepts every open test of a bundle it can do, at one slot: one trip for the patient.
+-- Each test still goes through the atomic accept_referral, so races with other labs stay safe.
+create function tb.accept_bundle(p_actor text, p_idem text, p_bundle bigint, p_slot timestamptz) returns jsonb
+language plpgsql as $$
+declare
+  v jsonb; u tb.demo_users; r tb.referrals; res jsonb; h tb.hospitals; b tb.referral_bundles;
+  done_codes text[] := '{}'; done_tests text[] := '{}'; skipped jsonb := '[]'; first_token text; first_id bigint;
+  names_en text; names_hi text; prep_en text; prep_hi text;
+begin
+  v := tb.idem_begin(p_idem, p_actor, 'accept_bundle');
+  if v is not null then return v; end if;
+  select * into u from tb.demo_users where id = p_actor;
+  if u.role is distinct from 'lab' then return tb.fail(p_idem, 'forbidden', 'Only a lab desk can accept'); end if;
+  select * into b from tb.referral_bundles where id = p_bundle;
+  if not found then return tb.fail(p_idem, 'not_found', 'Bundle not found'); end if;
+
+  for r in
+    select r2.* from tb.referrals r2
+      join tb.referral_recipients rr on rr.referral_id = r2.id and rr.hospital_id = u.hospital_id
+     where r2.bundle_id = p_bundle and r2.status = 'open' and rr.response is null
+     order by r2.id
+  loop
+    res := tb.accept_referral(p_actor, p_idem || ':' || r.id, r.id, p_slot, true);
+    if (res->>'ok')::boolean then
+      done_codes := done_codes || r.code;
+      done_tests := done_tests || r.test_type_id;
+      if first_id is null then first_id := r.id; first_token := r.patient_token; end if;
+    else
+      skipped := skipped || jsonb_build_object('code', r.code, 'test', r.test_type_id, 'message', res->>'message');
+    end if;
+  end loop;
+
+  if cardinality(done_codes) = 0 then
+    if jsonb_array_length(skipped) = 0 then  -- another lab already took it: say who, and log the attempt
+      select string_agg(distinct h2.short_name, ', ') into names_en
+        from tb.referrals r2 join tb.hospitals h2 on h2.id = r2.accepted_hospital_id where r2.bundle_id = p_bundle;
+      update tb.referral_recipients set response = 'lost_race', responded_at = tb.app_now()
+       where hospital_id = u.hospital_id and response is null
+         and referral_id in (select id from tb.referrals where bundle_id = p_bundle);
+      perform tb.audit(p_actor, (select min(id) from tb.referrals where bundle_id = p_bundle), 'accept_rejected', null, null,
+        jsonb_build_object('bundle', b.code, 'winner', coalesce(names_en, '—')), p_idem);
+    end if;
+    return tb.fail(p_idem, 'already_accepted',
+      coalesce(skipped->0->>'message', 'Already accepted by ' || names_en, 'No open tests of this bundle for your lab'),
+      jsonb_build_object('skipped', skipped, 'by', names_en));
+  end if;
+
+  select * into h from tb.hospitals where id = u.hospital_id;
+  select string_agg(name_en, ' + ' order by id), string_agg(name_hi, ' + ' order by id),
+         string_agg(sms_prep_en, ' ' order by id), string_agg(sms_prep_hi, ' ' order by id)
+    into names_en, names_hi, prep_en, prep_hi
+    from tb.test_types where id = any(done_tests);
+  perform tb.audit(p_actor, first_id, 'bundle_accepted', null, null,
+    jsonb_build_object('bundle', b.code, 'lab', h.short_name, 'accepted', array_to_string(done_codes, ', '),
+                       'one_trip', cardinality(done_codes), 'skipped', jsonb_array_length(skipped)), p_idem);
+  perform tb.send_msg(b.patient_id, first_id, 'bundle-accept:' || b.code || ':' || array_to_string(done_codes, ','),
+    'TestBridge: आपकी ' || names_hi || ' जाँच एक ही बार में ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
+      ' पर तय है। टोकन ' || array_to_string(done_codes, ', ') || '। ' || prep_hi || ' पुष्टि के लिए 1 भेजें। /s/' || first_token,
+    'TestBridge: Your ' || names_en || ' are booked together (one trip) at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
+      '. Tokens ' || array_to_string(done_codes, ', ') || '. ' || prep_en || ' Reply 1 to confirm. /s/' || first_token);
+  return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'accepted', to_jsonb(done_codes), 'skipped', skipped,
+    'lab', h.short_name, 'code', b.code));
+end $$;
+
+-- Bump when the schema changes: the app rebuilds the (demo) database when it sees an older version.
+comment on schema tb is 'testbridge-schema-v2';

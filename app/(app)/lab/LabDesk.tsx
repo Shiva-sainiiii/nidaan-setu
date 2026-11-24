@@ -6,6 +6,7 @@ import { fmtDT } from "@/lib/format";
 import { Alert, StatusChip } from "@/components/ui";
 import { LiveBadge } from "@/components/LiveBadge";
 import { IncomingCard, type Incoming } from "./IncomingCard";
+import { BundleCard, ONE_TRIP_BONUS } from "./BundleCard";
 import { TodayCard, type Today } from "./TodayCard";
 
 type Missed = { id: number; code: string; test_type_id: string; priority: string; status: string; response: string | null; winner: string | null; updated_at: string };
@@ -27,6 +28,18 @@ function beep() {
   } catch {
     /* audio blocked until first click: fine */
   }
+}
+
+/** Groups tests of the same bundle; a lab that can do every open test gets a one-trip bonus in the ordering. */
+function groupIncoming(rows: Incoming[]): Incoming[][] {
+  const groups = new Map<string, Incoming[]>();
+  for (const r of rows) {
+    const k = r.bundle_id ? `b${r.bundle_id}` : `r${r.id}`;
+    groups.set(k, [...(groups.get(k) ?? []), r]);
+  }
+  const rank = (g: Incoming[]) =>
+    Math.max(...g.map((r) => r.score.total)) + (g.length > 1 && g.length === g[0].bundle_open ? ONE_TRIP_BONUS : 0);
+  return [...groups.values()].sort((a, b) => rank(b) - rank(a));
 }
 
 export function LabDesk({ hospital }: { hospital: string }) {
@@ -87,9 +100,13 @@ export function LabDesk({ hospital }: { hospital: string }) {
               No open requests right now. New ones appear here instantly.
             </p>
           )}
-          {data?.incoming.map((r) => (
-            <IncomingCard key={r.id} r={r} serverNow={serverNow} onResult={notify} />
-          ))}
+          {groupIncoming(data?.incoming ?? []).map((g) =>
+            g.length > 1 ? (
+              <BundleCard key={`b${g[0].bundle_id}`} items={g} serverNow={serverNow} onResult={notify} />
+            ) : (
+              <IncomingCard key={g[0].id} r={g[0]} serverNow={serverNow} onResult={notify} />
+            ),
+          )}
           {(data?.missed.length ?? 0) > 0 && (
             <div className="pt-2">
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recently closed for your lab</h3>

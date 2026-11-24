@@ -32,7 +32,7 @@ export type ReferralForm = {
   phone: string;
   name?: string;
   abha?: string;
-  test: string;
+  tests: string[]; // one or more tests for the same patient (several → a bundle)
   priority: "P1" | "P2" | "P3";
   temp_med: boolean;
   note: string;
@@ -44,19 +44,19 @@ export type ReferralForm = {
 export async function createReferral(form: ReferralForm, idem: string): Promise<RpcResult> {
   const u = await need("doctor");
   if (!u) return denied;
-  return rpc("create_referral", [u.id, idem, JSON.stringify(form)]);
+  return rpc("create_bundle", [u.id, idem, JSON.stringify(form)]); // 1 test → plain referral
 }
 
-export async function lookupPatientAction(phone: string, test: string) {
+export async function lookupPatientAction(phone: string, tests: string[]) {
   const u = await need("doctor");
   if (!u) return null;
-  return lookupPatient(u, phone, test);
+  return lookupPatient(u, phone, tests);
 }
 
-export async function previewLabsAction(test: string, km: number) {
+export async function previewLabsAction(tests: string[], km: number) {
   const u = await need("doctor");
-  if (!u) return [];
-  return previewLabs(u, test, km);
+  if (!u || tests.length === 0) return [];
+  return previewLabs(u, tests, km);
 }
 
 // ---------------------------------------------------------------- lab + doctor transitions
@@ -65,6 +65,14 @@ export async function acceptReferral(id: number, slotLocal: string, idem: string
   if (!u) return denied;
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(slotLocal)) return { ok: false, message: "Pick a date and time" };
   return rpc("accept_referral", [u.id, idem, id, `${slotLocal}:00+05:30`]); // datetime-local is IST
+}
+
+/** Accept every open test of a bundle this lab can do, at one slot (one trip for the patient). */
+export async function acceptBundle(bundleId: number, slotLocal: string, idem: string): Promise<RpcResult> {
+  const u = await need("lab");
+  if (!u) return denied;
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(slotLocal)) return { ok: false, message: "Pick a date and time" };
+  return rpc("accept_bundle", [u.id, idem, bundleId, `${slotLocal}:00+05:30`]);
 }
 
 export async function declineReferral(id: number, reason: string, idem: string): Promise<RpcResult> {

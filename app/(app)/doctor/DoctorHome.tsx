@@ -9,7 +9,7 @@ import { LiveBadge } from "@/components/LiveBadge";
 type Row = {
   id: number; code: string; status: string; priority: string; on_temp_medication: boolean; test_name: string;
   patient_name: string; phone: string; original_slot_at: string; accepted_slot_at: string | null; lab_name: string | null;
-  created_at: string; updated_at: string; days_saved: number | null; labs_notified: number;
+  created_at: string; updated_at: string; bundle_code: string | null; days_saved: number | null; labs_notified: number;
 };
 type Data = { referrals: Row[]; stats: { active: number; done: number; days_saved: number; slots_released: number } };
 
@@ -64,7 +64,9 @@ export function DoctorHome({ hospital }: { hospital: string }) {
               <tr key={`${r.id}-${r.status}`} className={`${recent(r.updated_at) ? "flash-in" : ""} border-t border-slate-100 hover:bg-slate-50`}>
                 <td className="px-3 py-2">
                   <Link href={`/r/${r.id}`} className="font-semibold text-teal-800 hover:underline">{r.code}</Link>
-                  <div className="mt-0.5 flex gap-1"><PriorityChip p={r.priority} /></div>
+                  <div className="mt-0.5 flex flex-wrap gap-1"><PriorityChip p={r.priority} />
+                    {r.bundle_code && <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-bold text-white" title="Several tests for this patient">{r.bundle_code}</span>}
+                  </div>
                 </td>
                 <td className="px-3 py-2">{r.patient_name}{r.on_temp_medication && <div className="text-xs text-fuchsia-700">temp. medication</div>}</td>
                 <td className="px-3 py-2">{r.test_name}</td>

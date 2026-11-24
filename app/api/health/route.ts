@@ -1,25 +1,9 @@
 import { NextResponse } from "next/server";
-import { q, isDemoMode } from "@/lib/db";
+import { dbStatus } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-
+// Open /api/health on any deployment to see which database is used and whether it works.
+// Never returns the password.
 export async function GET() {
-  const hasUrl = !!process.env.DATABASE_URL;
-  let host: string | null = null;
-  try {
-    host = hasUrl ? new URL(process.env.DATABASE_URL!).host : null;
-  } catch {
-    host = "INVALID URL FORMAT (special chars in password?)";
-  }
-  try {
-    const r = await q<{ n: number }>("select count(*)::int as n from tb.demo_users");
-    return NextResponse.json({ ok: true, demoMode: await isDemoMode(), hasUrl, host, users: r[0]?.n });
-  } catch (e) {
-    return NextResponse.json({
-      ok: false,
-      hasUrl,
-      host,
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  const s = await dbStatus();
+  return NextResponse.json(s, { status: s.ok ? 200 : 503, headers: { "cache-control": "no-store" } });
 }

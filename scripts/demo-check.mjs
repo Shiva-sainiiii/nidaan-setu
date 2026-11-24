@@ -1,22 +1,9 @@
 // Rehearsal check: follows the PLAN.md section 7 demo script (demo script) across 5 "devices", starting from the Reset button.
 import { chromium } from "playwright-core";
-import fs from "node:fs";
-import pg from "pg";
-
-// Usage: npm run check:demo   (app must be running; BASE=http://host:3000 to target another server)
-// Needs Chrome/Chromium: set CHROME=/path/to/chrome if not at /usr/bin/google-chrome.
-for (const f of [".env.local", ".env"]) {
-  if (!fs.existsSync(f)) continue;
-  for (const line of fs.readFileSync(f, "utf8").split("\n")) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-  }
-}
-const url = process.env.DATABASE_URL;
-const db = new pg.Client({ connectionString: url, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false } });
-await db.connect();
-const Q = async (sql) => String(Object.values((await db.query(sql)).rows[0] ?? {})[0] ?? "");
 const B = process.env.BASE ?? "http://localhost:3000";
+// Uses only the app's HTTP API, so it works with the local database and with Postgres.
+const api = async (u) => (await (await fetch(`${B}${u}`)).json()).data;
+const smsCount = async () => (await api("/api/live?view=phone&patient=P-RAMESH")).messages.length;
 const errors = [];
 const t0 = Date.now();
 const step = (s) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s] ${s}`);
@@ -48,7 +35,7 @@ step("Reset via UI; 4 devices logged in");
 // 0:40 Create
 await laptop1.goto(`${B}/doctor/new`);
 await laptop1.getByText("Use demo patient").click();
-await laptop1.getByText(/Original slot in your queue/).waitFor();
+await laptop1.getByText(/original slot in your queue/i).waitFor();
 await laptop1.getByText(/I explained to the patient/).click();
 const btn = laptop1.getByRole("button", { name: /Send to 3 labs/ });
 await btn.waitFor();
@@ -69,10 +56,12 @@ const [win, lose] = winnerName === "B" ? [laptop2, laptop3] : [laptop3, laptop2]
 await lose.getByText(/Already accepted by/).first().waitFor();
 step(`Race: Lab ${winnerName} won, other lab sees "Already accepted by …"`);
 // double-click Accept again → nothing changes (card is gone; try via API with same flow)
-const before = await Q("select count(*) from tb.messages") + "/" + await Q("select version from tb.referrals where id=1");
+const before = await smsCount();
 await win.reload();
 await win.waitForTimeout(1500);
-step(`After refresh: messages/version unchanged? ${before} → ${await Q("select count(*) from tb.messages")}/${await Q("select version from tb.referrals where id=1")}`);
+const after = await smsCount();
+step(`After refresh: patient SMS count unchanged? ${before} → ${after}`);
+if (before !== after) errors.push("duplicate SMS after refresh");
 
 // 2:30 Patient
 await phone.getByText(/पर तय है/).waitFor();
@@ -105,8 +94,7 @@ step("Home queue: slot released to Pooja Rani");
 // 4:00 Trust
 await laptop1.goto(`${B}/audit`);
 await laptop1.getByText("Accept rejected (already taken)").waitFor();
-step(`Audit log shows the losing attempt; ${await Q("select count(*) from tb.audit_log")} rows`);
+step(`Audit log shows the losing attempt; ${(await api("/api/live?view=audit")).length} rows`);
 console.log(errors.length ? `ERRORS: ${errors.join(" | ")}` : `PASS in ${((Date.now() - t0) / 1000).toFixed(0)}s, no errors`);
 await browser.close();
-await db.end();
 process.exit(errors.length ? 1 : 0);

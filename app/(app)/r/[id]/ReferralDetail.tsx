@@ -14,12 +14,13 @@ type R = {
   test_name: string; patient_name: string; patient_phone: string; patient_age: number | null; abha_id: string | null;
   from_short: string; doctor_name: string; original_slot_at: string; created_at: string; expires_at: string;
   max_distance_km: number; radius_round: number; patient_token: string;
-  lab_name: string | null; lab_address: string | null; lab_phone: string | null; lab_distance_km: number | null;
+  lab_name: string | null; lab_short: string | null; lab_address: string | null; lab_phone: string | null; lab_distance_km: number | null;
   lab_is_free: boolean | null; lab_price: number | null; accepted_slot_at: string | null; test_done_at: string | null;
-  days_saved: number | null; score: Score; now: string;
+  days_saved: number | null; score: Score; now: string; bundle_code: string | null;
 };
+type Sibling = { id: number; code: string; test_name: string; status: string; accepted_slot_at: string | null; lab_name: string | null };
 type Recipient = { hospital_id: string; short_name: string; distance_km: number; response: string | null; round: number; is_free: boolean; price_inr: number | null };
-type Data = { referral: R; recipients: Recipient[]; audit: AuditRow[]; report: { filename: string; reported_by_name: string; reg_no: string; uploaded_at: string } | null };
+type Data = { referral: R; recipients: Recipient[]; audit: AuditRow[]; siblings: Sibling[]; report: { filename: string; reported_by_name: string; reg_no: string; uploaded_at: string } | null };
 
 const RESP: Record<string, string> = {
   accepted: "bg-emerald-100 text-emerald-800", lost_race: "bg-slate-100 text-slate-600", declined: "bg-rose-100 text-rose-700",
@@ -62,6 +63,7 @@ export function ReferralDetail({ id, role }: { id: number; role: string }) {
             <StatusChip status={r.status} />
             <PriorityChip p={r.priority} />
             {r.on_temp_medication && <TempMedBadge />}
+            {r.bundle_code && <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-bold text-white">BUNDLE {r.bundle_code}</span>}
           </div>
           <p className="text-sm text-slate-500">
             {r.test_name} · referred by {r.doctor_name}, {r.from_short} · {fmtDT(r.created_at)}
@@ -146,6 +148,30 @@ export function ReferralDetail({ id, role }: { id: number; role: string }) {
             <div className="text-slate-600">Original slot: {fmtDT(r.original_slot_at)}</div>
             {r.note && <div className="mt-2 rounded bg-slate-50 p-2 text-slate-700">“{r.note}”</div>}
           </Card>
+
+          {data.siblings.length > 0 && (
+            <Card className="space-y-2">
+              <div className="text-xs font-semibold uppercase text-slate-500">Other tests in bundle {r.bundle_code}</div>
+              <ul className="space-y-1.5 text-sm">
+                {data.siblings.map((s) => (
+                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-2">
+                    <Link href={`/r/${s.id}`} className="font-medium text-teal-800 hover:underline">{s.test_name} <span className="text-xs text-slate-500">{s.code}</span></Link>
+                    <StatusChip status={s.status} />
+                    {s.lab_name && <span className="w-full text-xs text-slate-500">{s.lab_name} · {fmtDT(s.accepted_slot_at)}</span>}
+                  </li>
+                ))}
+              </ul>
+              {(() => {
+                const labs = new Set([r.lab_short, ...data.siblings.map((s) => s.lab_name)].filter(Boolean)); // both short names
+                const total = data.siblings.length + 1;
+                return labs.size > 0 && (
+                  <p className={`rounded px-2 py-1 text-xs ${labs.size === 1 ? "bg-emerald-50 text-emerald-800" : "bg-slate-50 text-slate-600"}`}>
+                    {labs.size === 1 ? `All booked tests at one lab: one trip for ${total} tests.` : `Booked at ${labs.size} labs.`}
+                  </p>
+                );
+              })()}
+            </Card>
+          )}
 
           <Card className="space-y-2">
             <div className="text-xs font-semibold uppercase text-slate-500">Urgency (shown to every lab)</div>

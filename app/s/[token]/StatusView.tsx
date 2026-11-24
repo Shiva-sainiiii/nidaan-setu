@@ -10,6 +10,7 @@ type S = {
   from_name: string; doctor_name: string; lab_name: string | null; lab_address_en: string | null; lab_address_hi: string | null;
   lab_phone: string | null; lab_lat: number | null; lab_lng: number | null; lab_is_free: boolean | null; lab_price: number | null;
   confirmed: boolean;
+  siblings: { test_en: string; test_hi: string; status: string; code: string; lab: string | null; slot: string | null }[];
 };
 type Lang = "hi" | "en";
 
@@ -25,7 +26,7 @@ const T = {
     atLab: "आप लैब पहुँच गए हैं। जाँच जारी है।",
     done: "जाँच हो गई। रिपोर्ट आपके डॉक्टर को भेजी जाएगी।",
     reportSent: (d: string, h: string) => `रिपोर्ट ${d} (${h}) को भेज दी गई है। इलाज वहीं जारी रखें।`,
-    prep: "तैयारी", bring: "साथ लाएँ", updated: "अपडेट", help: "सवाल हो तो अपने अस्पताल से संपर्क करें।",
+    prep: "तैयारी", bring: "साथ लाएँ", others: "आपकी बाकी जाँचें", waitingLab: "लैब का इंतज़ार", updated: "अपडेट", help: "सवाल हो तो अपने अस्पताल से संपर्क करें।",
   },
   en: {
     hello: "Hello", yourTest: "Your test", token: "Token",
@@ -38,7 +39,7 @@ const T = {
     atLab: "You are at the lab. Test in progress.",
     done: "Test done. The report will be sent to your doctor.",
     reportSent: (d: string, h: string) => `The report has been sent to ${d} (${h}). Continue your treatment there.`,
-    prep: "Preparation", bring: "Bring with you", updated: "Updated", help: "Questions? Contact your hospital.",
+    prep: "Preparation", bring: "Bring with you", others: "Your other tests", waitingLab: "Waiting for a lab", updated: "Updated", help: "Questions? Contact your hospital.",
   },
 };
 
@@ -136,6 +137,18 @@ export function StatusView({ token }: { token: string }) {
         <div className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
           <div><div className="font-semibold">{t.prep}</div><p className="text-slate-700">{lang === "hi" ? s.prep_hi : s.prep_en}</p></div>
           <div><div className="font-semibold">{t.bring}</div><p className="text-slate-700">{lang === "hi" ? s.bring_hi : s.bring_en}</p></div>
+        </div>
+      )}
+
+      {s.siblings.length > 0 && (
+        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
+          <div className="font-semibold">{t.others}</div>
+          {s.siblings.map((x) => (
+            <div key={x.code} className="flex flex-wrap justify-between gap-1 border-t border-slate-100 pt-2 text-[15px]">
+              <span className="font-medium">{lang === "hi" ? x.test_hi : x.test_en} <span className="text-xs text-slate-500">{x.code}</span></span>
+              <span className="text-slate-600">{x.lab ? `${x.lab} · ${fmtDT(x.slot)}` : t.waitingLab}</span>
+            </div>
+          ))}
         </div>
       )}
 

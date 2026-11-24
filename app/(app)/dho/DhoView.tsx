@@ -9,7 +9,7 @@ import { LiveBadge } from "@/components/LiveBadge";
 type Data = {
   kpi: {
     sent: number; accepted: number; tests_done: number; median_days_saved: number; total_days_saved: number;
-    slots_released: number; expired: number; temp_med_waiting_14d: number;
+    slots_released: number; expired: number; temp_med_waiting_14d: number; bundles: number; trips_saved: number;
   };
   hospitals: { id: string; short_name: string; kind: string; sent: number; received: number; accepted: number; declined: number; tests_done: number }[];
   doctors: { name: string; short_name: string; referrals: number; p1: number; temp_med: number }[];
@@ -39,6 +39,7 @@ export function DhoView() {
         <Stat label="Queue slots released" value={k?.slots_released ?? "…"} hint="given to the next patient at the sending hospital" />
         <Stat label="Expired (no lab)" value={k?.expired ?? "…"} hint="patient kept original date" />
         <Stat label="On temp. medication, >14 days to test" value={k?.temp_med_waiting_14d ?? "…"} hint="needs attention" />
+        <Stat label="Patient trips saved" value={k?.trips_saved ?? "…"} hint={k ? `by booking ${k.bundles} multi-test bundle(s) together` : ""} />
       </div>
 
       <Card className="overflow-x-auto !p-0">

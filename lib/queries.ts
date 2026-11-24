@@ -10,8 +10,10 @@ export async function doctorView(u: User) {
             h.short_name as lab_name, r.created_at, r.updated_at, r.expires_at,
             case when r.test_done_at is not null
                  then tb.ist_date(r.original_slot_at) - tb.ist_date(r.test_done_at) end as days_saved,
-            (select count(*) from tb.referral_recipients rr where rr.referral_id = r.id)::int as labs_notified
+            (select count(*) from tb.referral_recipients rr where rr.referral_id = r.id)::int as labs_notified,
+            r.bundle_id, b.code as bundle_code
        from tb.referrals r
+       left join tb.referral_bundles b on b.id = r.bundle_id
        join tb.patients p on p.id = r.patient_id
        join tb.test_types t on t.id = r.test_type_id
        left join tb.hospitals h on h.id = r.accepted_hospital_id
@@ -39,40 +41,40 @@ export async function testsFor(hospitalId: string) {
   );
 }
 
-export async function lookupPatient(u: User, phone: string, test: string) {
+export async function lookupPatient(u: User, phone: string, tests: string[]) {
   const digits = phone.replace(/\D/g, "").slice(-10);
   const patient = await one<{ id: string; display_name: string; age: number; abha_id: string | null }>(
     `select id, display_name, age, abha_id from tb.patients where phone = $1`,
     [digits],
   );
-  const slot = patient
-    ? await one<{ slot_at: string; position: number }>(
-        `select slot_at, position from tb.home_queue
-          where hospital_id = $1 and test_type_id = $2 and patient_id = $3 and status = 'booked'
-          order by slot_at limit 1`,
-        [u.hospital_id, test, patient.id],
-      )
-    : null;
-  const active = patient
-    ? await one<{ code: string; id: number }>(
-        `select code, id from tb.referrals where patient_id = $1 and test_type_id = $2
-            and status not in ('closed','expired','cancelled') limit 1`,
-        [patient.id, test],
-      )
-    : null;
-  return { patient, slot, active };
+  if (!patient) return { patient: null, slots: [], active: [] };
+  const slots = await q<{ test: string; slot_at: string; position: number }>(
+    `select distinct on (test_type_id) test_type_id as test, slot_at, position from tb.home_queue
+      where hospital_id = $1 and test_type_id = any($2) and patient_id = $3 and status = 'booked'
+      order by test_type_id, slot_at`,
+    [u.hospital_id, tests, patient.id],
+  );
+  const active = await q<{ test: string; code: string; id: number }>(
+    `select test_type_id as test, code, id from tb.referrals where patient_id = $1 and test_type_id = any($2)
+        and status not in ('closed','expired','cancelled')`,
+    [patient.id, tests],
+  );
+  return { patient, slots, active };
 }
 
-export async function previewLabs(u: User, test: string, km: number) {
+export async function previewLabs(u: User, tests: string[], km: number) {
   return q(
-    `select h.id, h.short_name, h.kind, ht.is_free, ht.price_inr, ht.current_wait_days,
-            round(tb.km(a.lat, a.lng, h.lat, h.lng)::numeric, 1) as distance_km
+    `select h.id, h.short_name, h.kind, round(tb.km(a.lat, a.lng, h.lat, h.lng)::numeric, 1) as distance_km,
+            count(*)::int as n,
+            jsonb_agg(jsonb_build_object('test', ht.test_type_id, 'is_free', ht.is_free, 'price_inr', ht.price_inr,
+                                         'wait', ht.current_wait_days) order by ht.test_type_id) as tests
        from tb.hospitals a
-       join tb.hospital_tests ht on ht.test_type_id = $2
+       join tb.hospital_tests ht on ht.test_type_id = any($2)
        join tb.hospitals h on h.id = ht.hospital_id
       where a.id = $1 and h.id <> a.id and tb.km(a.lat, a.lng, h.lat, h.lng) <= $3
-      order by distance_km`,
-    [u.hospital_id, test, km],
+      group by h.id, h.short_name, h.kind, a.lat, a.lng, h.lat, h.lng
+      order by count(*) desc, distance_km`,
+    [u.hospital_id, tests, km],
   );
 }
 
@@ -89,6 +91,7 @@ export async function referralView(u: User, id: number) {
             case when r.test_done_at is not null
                  then tb.ist_date(r.original_slot_at) - tb.ist_date(r.test_done_at) end as days_saved,
             tb.score(r.priority, r.on_temp_medication, r.created_at, null) as score,
+            (select code from tb.referral_bundles where id = r.bundle_id) as bundle_code,
             tb.app_now() as now
        from tb.referrals r
        join tb.test_types t on t.id = r.test_type_id
@@ -108,7 +111,7 @@ export async function referralView(u: User, id: number) {
     (u.role === "lab" && r.accepted_hospital_id === u.hospital_id);
   if (!allowed) return null;
 
-  const [recipients, audit, report] = await Promise.all([
+  const [recipients, audit, report, siblings] = await Promise.all([
     q(
       `select rr.hospital_id, h.short_name, rr.distance_km, rr.response, rr.responded_at, rr.round,
               ht.is_free, ht.price_inr
@@ -129,8 +132,18 @@ export async function referralView(u: User, id: number) {
          from tb.reports where referral_id = $1`,
       [id],
     ),
+    q(
+      `select s.id, s.code, s.test_type_id, t.name_en as test_name, s.status, s.accepted_slot_at, h.short_name as lab_name, b.code as bundle_code
+         from tb.referrals me
+         join tb.referrals s on s.bundle_id = me.bundle_id and s.id <> me.id
+         join tb.test_types t on t.id = s.test_type_id
+         join tb.referral_bundles b on b.id = s.bundle_id
+         left join tb.hospitals h on h.id = s.accepted_hospital_id
+        where me.id = $1 order by s.id`,
+      [id],
+    ),
   ]);
-  return { referral: r, recipients, audit, report };
+  return { referral: r, recipients, audit, report, siblings };
 }
 
 // ---------------------------------------------------------------- lab desk
@@ -140,11 +153,15 @@ export async function labView(u: User) {
       `select r.id, r.code, r.test_type_id, t.name_en as test_name, r.priority, r.on_temp_medication, r.note,
               rr.distance_km, rr.round, ht.is_free, ht.price_inr, ht.current_wait_days,
               r.expires_at, r.created_at, a.short_name as from_name,
-              tb.score(r.priority, r.on_temp_medication, r.created_at, rr.distance_km) as score
+              tb.score(r.priority, r.on_temp_medication, r.created_at, rr.distance_km) as score,
+              r.bundle_id, b.code as bundle_code,
+              (select count(*) from tb.referrals r2 where r2.bundle_id = r.bundle_id)::int as bundle_size,
+              (select count(*) from tb.referrals r2 where r2.bundle_id = r.bundle_id and r2.status = 'open')::int as bundle_open
          from tb.referral_recipients rr
          join tb.referrals r on r.id = rr.referral_id
          join tb.test_types t on t.id = r.test_type_id
          join tb.hospitals a on a.id = r.from_hospital_id
+         left join tb.referral_bundles b on b.id = r.bundle_id
          left join tb.hospital_tests ht on ht.hospital_id = rr.hospital_id and ht.test_type_id = r.test_type_id
         where rr.hospital_id = $1 and r.status = 'open' and rr.response is null and r.expires_at > tb.app_now()
         order by (tb.score(r.priority, r.on_temp_medication, r.created_at, rr.distance_km)->>'total')::int desc,
@@ -164,7 +181,8 @@ export async function labView(u: User) {
     ),
     q(
       `select r.id, r.code, r.test_type_id, t.name_en as test_name, r.priority, r.on_temp_medication, r.status,
-              r.accepted_slot_at, a.short_name as from_name, r.note
+              r.accepted_slot_at, a.short_name as from_name, r.note,
+              (select code from tb.referral_bundles where id = r.bundle_id) as bundle_code
          from tb.referrals r
          join tb.test_types t on t.id = r.test_type_id
          join tb.hospitals a on a.id = r.from_hospital_id
@@ -240,7 +258,12 @@ export async function statusView(token: string) {
             h.name as lab_name, h.address_en as lab_address_en, h.address_hi as lab_address_hi,
             h.phone as lab_phone, h.lat as lab_lat, h.lng as lab_lng,
             ht.is_free as lab_is_free, ht.price_inr as lab_price,
-            exists(select 1 from tb.audit_log l where l.referral_id = r.id and l.action = 'patient_confirmed') as confirmed
+            exists(select 1 from tb.audit_log l where l.referral_id = r.id and l.action = 'patient_confirmed') as confirmed,
+            (select coalesce(jsonb_agg(jsonb_build_object('test_en', t2.name_en, 'test_hi', t2.name_hi, 'status', s.status,
+                       'code', s.code, 'lab', h2.name, 'slot', s.accepted_slot_at) order by s.id), '[]'::jsonb)
+               from tb.referrals s join tb.test_types t2 on t2.id = s.test_type_id
+               left join tb.hospitals h2 on h2.id = s.accepted_hospital_id
+              where s.bundle_id = r.bundle_id and s.id <> r.id) as siblings
        from tb.referrals r
        join tb.patients p on p.id = r.patient_id
        join tb.test_types t on t.id = r.test_type_id
@@ -275,6 +298,10 @@ export async function dhoView() {
             coalesce(sum(tb.ist_date(original_slot_at) - tb.ist_date(test_done_at)) filter (where test_done_at is not null), 0)::int as total_days_saved,
             (select count(*) from tb.home_queue where status = 'released')::int as slots_released,
             count(*) filter (where status = 'expired')::int as expired,
+            (select count(*) from tb.referral_bundles)::int as bundles,
+            (select coalesce(sum(n_tests - n_labs), 0) from (
+               select count(*) as n_tests, count(distinct accepted_hospital_id) as n_labs
+                 from tb.referrals where bundle_id is not null and accepted_hospital_id is not null group by bundle_id) x)::int as trips_saved,
             count(*) filter (where on_temp_medication and test_done_at is null
                                and status not in ('cancelled','closed')
                                and coalesce(accepted_slot_at, original_slot_at) - created_at > interval '14 days')::int as temp_med_waiting_14d

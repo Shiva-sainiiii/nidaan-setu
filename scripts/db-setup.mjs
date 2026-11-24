@@ -1,7 +1,9 @@
-// Applies db/schema.sql + db/seed.sql (and db/supabase-realtime.sql on Supabase).
-// Usage: npm run db:setup   (reads DATABASE_URL from .env.local or env)
+// npm run db:reset
+//  - Local mode (DATABASE_URL empty): deletes ./.data/pglite. The app recreates + seeds it on next start.
+//    STOP the app first (Ctrl+C). While the app runs, use "Demo ⚙ → Reset demo data" instead.
+//  - Postgres mode (DATABASE_URL set): applies db/schema.sql + db/seed.sql (+ realtime on Supabase).
 import fs from "node:fs";
-import pg from "pg";
+import path from "node:path";
 
 for (const f of [".env.local", ".env"]) {
   if (!fs.existsSync(f)) continue;
@@ -10,9 +12,16 @@ for (const f of [".env.local", ".env"]) {
     if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
   }
 }
-const url = process.env.DATABASE_URL;
-if (!url) { console.error("DATABASE_URL is not set (see .env.example)"); process.exit(1); }
+const url = process.env.DATABASE_URL?.trim();
 
+if (!url) {
+  const dir = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
+  fs.rmSync(dir, { recursive: true, force: true });
+  console.log(`Local database removed (${dir}). Start the app (npm run dev / npm start) to recreate it with demo data.`);
+  process.exit(0);
+}
+
+const { default: pg } = await import("pg");
 const client = new pg.Client({ connectionString: url, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false } });
 await client.connect();
 const files = ["db/schema.sql", "db/seed.sql"];
@@ -24,4 +33,4 @@ for (const f of files) {
   console.log("ok");
 }
 await client.end();
-console.log(isSupabase ? "Done (Supabase realtime enabled)." : "Done (plain Postgres: the app uses 2s polling).");
+console.log(isSupabase ? "Done (Supabase realtime enabled)." : "Done.");

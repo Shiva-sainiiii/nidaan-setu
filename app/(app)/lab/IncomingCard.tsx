@@ -11,10 +11,11 @@ export type Incoming = {
   id: number; code: string; test_type_id: string; test_name: string; priority: string; on_temp_medication: boolean;
   note: string; distance_km: number; round: number; is_free: boolean | null; price_inr: number | null;
   current_wait_days: number | null; expires_at: string; created_at: string; from_name: string; score: Score;
+  bundle_id: number | null; bundle_code: string | null; bundle_size: number; bundle_open: number;
 };
 
 /** "YYYY-MM-DDT10:00" for tomorrow in IST, based on the (demo) server clock. */
-function tomorrow10(serverNow: number) {
+export function tomorrow10(serverNow: number) {
   const d = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" })
     .format(new Date(serverNow + 24 * 3600 * 1000));
   return `${d}T10:00`;
@@ -61,6 +62,11 @@ export function IncomingCard({ r, serverNow, onResult }: { r: Incoming; serverNo
             {r.is_free ? "Free at your lab (govt)" : `₹${r.price_inr} at your lab`}
             {r.round > 1 && " · widened search"}
           </div>
+          {r.bundle_id && r.bundle_size > 1 && (
+            <div className="text-xs text-slate-600">
+              Part of bundle <b>{r.bundle_code}</b> ({r.bundle_size} tests for this patient). You offer only this one; the others go to another lab.
+            </div>
+          )}
           {r.note && <div className="text-sm text-slate-800">“{r.note}”</div>}
           <ScoreBreakdown score={r.score} />
           <div className="text-xs text-slate-500">

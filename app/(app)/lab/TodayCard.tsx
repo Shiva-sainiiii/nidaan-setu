@@ -9,7 +9,7 @@ import type { Toast } from "./LabDesk";
 
 export type Today = {
   id: number; code: string; test_type_id: string; test_name: string; priority: string; on_temp_medication: boolean;
-  status: string; accepted_slot_at: string; from_name: string; note: string;
+  status: string; accepted_slot_at: string; from_name: string; note: string; bundle_code: string | null;
 };
 type Patient = { display_name: string; phone: string; abha_id: string | null; age: number | null };
 
@@ -78,7 +78,7 @@ export function TodayCard({ r, onResult }: { r: Today; onResult: (t: Toast) => v
             <PriorityChip p={r.priority} />
             {r.on_temp_medication && <TempMedBadge />}
           </div>
-          <div className="text-sm text-slate-600">{r.code} · referred by {r.from_name}{r.note && <> · “{r.note}”</>}</div>
+          <div className="text-sm text-slate-600">{r.code}{r.bundle_code && <> · bundle {r.bundle_code}</>} · referred by {r.from_name}{r.note && <> · “{r.note}”</>}</div>
           {patient ? (
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
               <b>{patient.display_name}</b>{patient.age ? `, ${patient.age}` : ""} · 📱 {patient.phone}

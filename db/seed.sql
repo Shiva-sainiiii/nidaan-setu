@@ -9,9 +9,10 @@ create or replace function tb.reset_demo() returns jsonb language plpgsql as $$
 declare d date;
 begin
   truncate tb.audit_log, tb.idempotency, tb.messages, tb.reports, tb.referral_recipients,
-           tb.referrals, tb.home_queue, tb.patients, tb.demo_users, tb.hospital_tests,
+           tb.referrals, tb.referral_bundles, tb.home_queue, tb.patients, tb.demo_users, tb.hospital_tests,
            tb.test_types, tb.hospitals restart identity cascade;
   perform setval('tb.ref_code_seq', 1001, false);
+  perform setval('tb.bundle_code_seq', 501, false);
   update tb.demo_clock set offset_interval = '0' where id = 1;
   d := tb.ist_date(now());
 

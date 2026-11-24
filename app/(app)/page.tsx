@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { loginAs } from "@/app/actions";
-import { q } from "@/lib/db";
+import { dbStatus, q } from "@/lib/db";
 
 type Row = { id: string; name: string; role: string; hospital_id: string | null; hospital: string | null; kind: string | null };
 
 export default async function LoginPage() {
+  const status = await dbStatus();
+  if (!status.ok) return <DbProblem error={status.error} mode={status.mode} host={status.host} notes={status.urlNotes} />;
   const users = await q<Row>(
     `select u.id, u.name, u.role, u.hospital_id, h.name as hospital, h.kind
        from tb.demo_users u left join tb.hospitals h on h.id = u.hospital_id order by u.role = 'doctor' desc, u.role, u.id`,
@@ -57,6 +59,21 @@ export default async function LoginPage() {
           </Link>
         </div>
       </section>
+    </div>
+  );
+}
+
+function DbProblem({ error, mode, host, notes }: { error: string; mode: string; host: string | null; notes: string[] }) {
+  return (
+    <div className="mx-auto max-w-2xl space-y-4 rounded-2xl border border-rose-300 bg-rose-50 p-6">
+      <h1 className="text-xl font-bold text-rose-900">Database not connected</h1>
+      <p className="text-rose-900">{error}</p>
+      <ul className="list-disc space-y-1 pl-5 text-sm text-rose-900">
+        <li>Mode: <b>{mode === "postgres" ? "Postgres / Supabase (DATABASE_URL is set)" : "built-in local database (DATABASE_URL empty)"}</b>{host && <> · host <code>{host}</code></>}</li>
+        {notes.map((n) => <li key={n}>{n}</li>)}
+        <li>After changing environment variables on Vercel you must <b>Redeploy</b>.</li>
+        <li>Details: <a className="underline" href="/api/health">/api/health</a></li>
+      </ul>
     </div>
   );
 }

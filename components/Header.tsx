@@ -15,7 +15,8 @@ const NAV: Record<string, { href: string; label: string }[]> = {
 };
 
 export async function Header() {
-  const [u, offsetH] = await Promise.all([getUser(), clockOffsetHours()]);
+  // If the database is down, still render the header (the login page shows the actual error).
+  const [u, offsetH] = await Promise.all([getUser(), clockOffsetHours()]).catch(() => [null, 0] as const);
   return (
     <header className="no-print sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="bg-amber-100 px-4 py-0.5 text-center text-[11px] font-medium text-amber-900">

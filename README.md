@@ -12,19 +12,22 @@ Full plan, judge Q&A and pitch: [PLAN.md](PLAN.md). Code conventions and module 
 
 ---
 
-## Run it locally (5 minutes)
+## Run it locally (2 minutes, nothing else to install)
 
-Needs Node 20+ and Docker.
+Needs only **Node.js 20+**. No Postgres, no Docker.
 
 ```bash
 npm install
-cp .env.example .env.local      # default points at the local Docker database
-npm run db:local                # starts Postgres in Docker (container "testbridge-db", port 54329)
-npm run db:setup                # creates schema "tb" + loads demo data
+cp .env.example .env.local      # DATABASE_URL stays empty → built-in local database
 npm run dev                     # http://localhost:3000
 ```
 
-`npm run db:setup` wipes and reloads everything. During a demo use **Demo ⚙ → Reset demo data** in the header instead.
+On first start the app creates its database in `./.data/pglite` (PGlite: real Postgres running inside Node)
+and loads the demo data. Data survives restarts.
+
+- During a demo: **Demo ⚙ → Reset demo data** (header).
+- Wipe completely: stop the app, `npm run db:reset`, start again.
+- Optional: use a real Postgres instead (Supabase or Docker): set `DATABASE_URL` in `.env.local`, then `npm run db:reset` applies the schema there.
 
 ### Demo logins (no passwords: demo only)
 | Login card | Role | Lands on |
@@ -55,6 +58,10 @@ The next patient waiting with no date is **Pooja Rani**: she receives the releas
 | 5 | Laptop 1 | Referral page, then **Hospital queue** | “**Report ready: 14 days earlier**”; original slot moved to Pooja Rani |
 | 6 | Any | **Audit log** | Every action incl. the losing accept and every view of patient data |
 
+**Multi-test bundle (optional extra in the demo):** in *New referral* tick **MRI + CT**. One bundle (e.g. `TB-B501`) is created and the patient gets one SMS.
+Labs that can do both (B, D) see one card with **“Accept all 2 here (one trip)”**; Lab C (MRI only) sees just the MRI, marked “part of bundle”.
+One reply “1” confirms both tests, and the district dashboard counts **patient trips saved**.
+
 The “days earlier” number is computed (original slot date − actual test date), so it says 14 when the test is done the same day. Say whatever the screen shows.
 
 **Robustness moments to show:** two labs racing; double-click / refresh changes nothing; out-of-order buttons are disabled
@@ -73,48 +80,51 @@ It presses **Reset demo data**, then plays the whole flow above across 4 simulat
 
 ---
 
-## Deploy (Supabase + Vercel)
+## Deploy
 
-**1. Database (Supabase, free tier)**
-1. Create a project at supabase.com (region: Mumbai `ap-south-1`).
-2. *Project Settings → Database → Connection string*: copy the **Transaction pooler** URI (port **6543**); put your DB password in it.
-3. From your laptop: `DATABASE_URL="<that URI>" npm run db:setup`
-   (it detects Supabase and also runs `db/supabase-realtime.sql` for instant updates).
-4. *Project Settings → API*: note the **Project URL** and the **anon public** key.
+**Option A: one Node server with the built-in database (simplest).** Any host that runs a normal, always-on Node process:
+Render “Web Service”, Railway, a college/VPS machine, or a laptop.
+```bash
+npm ci
+npm run build
+npm start            # listens on $PORT (default 3000) on all interfaces
+```
+Env vars: none needed (`DATABASE_URL` empty). Run **one** instance only (the local database lives on that machine’s disk).
+On hosts without a persistent disk the demo data is recreated on every redeploy, which is fine for a demo.
+Render: Build command `npm ci && npm run build`, Start command `npm start`, instance count 1.
 
-**2. App (Vercel)**
-1. Push this folder to GitHub (`.env.local` is git-ignored; never commit it).
-2. vercel.com → *Add New Project* → import the repo.
-3. Environment variables:
-   - `DATABASE_URL` = the transaction pooler URI
-   - `NEXT_PUBLIC_SUPABASE_URL` = Project URL *(optional: instant updates; without it screens poll every 2 s)*
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon key *(optional, same)*
-4. Deploy. Open the URL, log in, **Demo ⚙ → Reset demo data**, then run `BASE=https://<your-app>.vercel.app npm run check:demo`
-   with `DATABASE_URL` set to the Supabase URI.
+**Option B: Vercel + Supabase.** Vercel runs many short-lived copies of the app, so it needs a shared database:
+1. Supabase project (region Mumbai) → **Connect** (top bar) → **Transaction pooler** → copy the URI (port **6543**), and put your real password in it.
+   It must start with `postgresql://`. The `https://….supabase.co` Project URL is a different thing.
+2. Vercel → *Settings → Environment Variables* → `DATABASE_URL` = that URI (no quotes, no `DATABASE_URL=` in the value), for **Production**.
+   Optional: `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` for instant updates.
+3. **Redeploy** (env changes only apply to new deployments).
+4. Open `https://<app>.vercel.app/api/health`. It should say `"ok": true`. On first use the app **creates the tables and demo data
+   in Supabase by itself**; `npm run db:reset` from a laptop is optional.
+5. If it says `"ok": false`, the `error` field tells you what's wrong (wrong password, placeholder left in, https URL, etc.).
+   Special characters (`# / @ %`) in the password are encoded automatically.
 
-> Security note for judges: the demo has no real login and the anon key can read the (synthetic) tables. Production design:
-> real auth + Postgres row-level security scoped by `hospital_id`.
+> Security note for judges: the demo has no real login. Production design: real auth + Postgres row-level security by `hospital_id`.
 
 ---
 
 ## If the venue Wi-Fi fails
 
 1. **Phone hotspot** (two phones, different carriers). Vercel + Supabase work over 4G. Nothing changes.
-2. **No internet at all:** one laptop is the server.
+2. **No internet at all:** one laptop is the server (built-in database, nothing else needed).
    ```bash
-   npm run db:local && npm run db:setup     # local Docker Postgres
    npm run start:lan                        # production build on 0.0.0.0:3000
    hostname -I                              # (Windows: ipconfig) → e.g. 192.168.43.12
    ```
    Other laptops/phones join the same hotspot (works without mobile data) and open `http://192.168.43.12:3000`.
-   Rehearse this once before the demo. Fonts are bundled at build time, so build while you still have internet.
+   Build once while you still have internet (fonts are downloaded at build time).
 3. **Last resort:** the recorded screen video (record it after the final rehearsal).
 
 ---
 
 ## How it works
 
-- **Next.js 16** (App Router) + **Tailwind**; **Postgres** via `pg`. Works on local Docker Postgres or Supabase.
+- **Next.js 16** (App Router) + **Tailwind**; **Postgres**: built-in PGlite (default, file in `./.data`) or any Postgres server via `DATABASE_URL`.
 - **All rules live in the database** ([db/schema.sql](db/schema.sql), schema `tb`). Every state change is one plpgsql function, one transaction:
   1. **idempotency key** (`tb.idempotency`): a retry or double click returns the stored result instead of acting twice;
   2. **compare-and-set** `UPDATE … WHERE status = 'open'`: concurrent accepts serialise on the row lock and exactly one wins;
@@ -123,11 +133,12 @@ It presses **Reset demo data**, then plays the whole flow above across 4 simulat
 - One active referral per patient + test (partial unique index), one report per referral (unique constraint).
 - Live screens poll `/api/live` every 2 s (Supabase Realtime, if configured, triggers an instant refresh). A dropped connection shows “retrying”, never a blank screen.
 - Times are IST. `tb.app_now()` = real time + demo-clock offset.
+- **Schema upgrades are automatic:** if the database has an older schema version, the app rebuilds the demo database on startup (synthetic data only).
 
 ```
 db/schema.sql          tables + all tb.* functions (create, accept, transition, report, reply, timers)
 db/seed.sql            tb.reset_demo(): fictional district, hospitals A–F, tests, queue
-lib/db.ts              pg pool + rpc() helper          lib/queries.ts   read queries per screen
+lib/db.ts              PGlite or pg + rpc() helper          lib/queries.ts   read queries per screen
 lib/useLive.ts         polling + realtime hook          app/actions.ts   server actions (all writes)
 app/(app)/doctor       dashboard, new referral, hospital queue
 app/(app)/r/[id]       referral detail + printable slip (QR)

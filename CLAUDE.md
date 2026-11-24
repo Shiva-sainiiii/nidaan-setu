@@ -8,7 +8,7 @@ Build **one module at a time**, compile + test it, then stop for review before t
 
 ## Stack
 - Next.js 16 (App Router, React Compiler, `cacheComponents` OFF) + Tailwind v4.
-- Postgres via `pg` (`DATABASE_URL`). Works with local Docker Postgres or Supabase.
+- Postgres: built-in **PGlite** stored in `./.data/pglite` when `DATABASE_URL` is empty (default, auto-created + seeded on first start); real Postgres via `pg` when `DATABASE_URL` is set (Supabase/Docker). Same SQL. See [lib/db.ts](lib/db.ts).
 - All tables and functions live in schema `tb`. **Every state change is a `tb.*` plpgsql function**
   called through `rpc()` in [lib/db.ts](lib/db.ts): idempotency key → compare-and-set UPDATE → audit row, one transaction.
 - Live screens poll `/api/live?view=…` every 2s ([lib/useLive.ts](lib/useLive.ts)); Supabase Realtime is optional and only triggers refetch.
@@ -17,13 +17,16 @@ Build **one module at a time**, compile + test it, then stop for review before t
 
 ## Commands
 ```
-npm run db:local   # start Docker Postgres (container testbridge-db, port 54329)
-npm run db:setup   # apply db/schema.sql + db/seed.sql (wipes and reseeds)
-npm run dev        # http://localhost:3000
-npm run build
+npm run dev        # http://localhost:3000 (creates ./.data/pglite with demo data on first start)
+npm run build && npm start   # production, 0.0.0.0:$PORT
+npm run db:reset   # local mode: delete ./.data (STOP the app first); Postgres mode: apply schema+seed
+npm run db:docker  # optional Docker Postgres (then set DATABASE_URL)
 npm run check:demo # full demo rehearsal in headless Chrome (RESETS demo data)
-npm run start:lan  # production build served on 0.0.0.0:3000 (no-Wi-Fi fallback)
+npm run start:lan  # production build on 0.0.0.0:3000 (no-Wi-Fi fallback)
 ```
+
+## Schema changes
+Bump `SCHEMA_VERSION` in [lib/db.ts](lib/db.ts) **and** the `comment on schema tb` line at the end of `db/schema.sql` together. The app then rebuilds the demo database automatically (local and Supabase).
 
 ## Rules
 - Never write referral state from TS directly; add/extend a `tb.*` function instead.
@@ -39,4 +42,5 @@ npm run start:lan  # production build served on 0.0.0.0:3000 (no-Wi-Fi fallback)
 | 4. Lab desk (incoming + score, accept race, today, upload report) | ✅ browser-tested (2-lab race) |
 | 5. Patient (phone panel, public status page `/s/[token]`) | ✅ browser-tested |
 | 6. Audit log page + DHO dashboard | ✅ browser-tested |
+| 8. Multi-test bundle (several tests, one patient, one trip) | ✅ browser-tested (bundle race, one SMS, reply confirms all) |
 | 7. End-to-end demo run, README, deploy guide | ✅ demo passes twice in a row (`npm run check:demo`); deploy waits for team accounts (README) |

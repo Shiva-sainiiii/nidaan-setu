@@ -17,14 +17,14 @@ The plan below is the original. The code differs in these places, on purpose:
 
 | Plan said | As built | Why |
 |---|---|---|
-| Supabase client (`supabase.rpc`), Supabase Storage for PDFs | Next.js talks to Postgres directly (`pg`, `DATABASE_URL`); report PDFs stored in Postgres | Same code runs on Supabase **or** a local Docker Postgres (offline fallback) |
+| Supabase client (`supabase.rpc`), Supabase Storage for PDFs | Built-in PGlite database (`./.data`, zero install) by default; any Postgres/Supabase via `DATABASE_URL`; report PDFs stored in the database | Runs on any laptop with just Node; same SQL on Supabase |
 | Realtime first, 10 s polling fallback | 2 s polling always; Supabase Realtime optional, only triggers an instant refresh | Works with no realtime service at all |
 | `/doctor/r/[id]`, `/doctor/r/[id]/slip`, `/lab/r/[id]` | `/r/[id]` and `/r/[id]/slip` shared by roles; lab work happens inline on `/lab` | Fewer screens to demo |
-| Offline fallback = `supabase start` | `npm run db:local && npm run db:setup && npm run start:lan` | Full Supabase stack is heavy on laptops |
+| Offline fallback = `supabase start` | `npm run start:lan` (built-in database) | No Docker or Supabase needed offline |
 | Score stored per recipient | Score computed on read by `tb.score()` | “Waiting N days” stays current |
 | Demo script: “13 days earlier” | Screen shows **14 days earlier** when the test is done the same day | Number is computed; say what the screen shows |
 
-Extra, not in the plan: printable slip with QR, `npm run check:demo` rehearsal test, demo clock (`+1h/+6h/+24h`) driving expiry → radius widening → expiry SMS and day-before reminders.
+Extra, not in the plan: **multi-test bundles** (several tests for one patient, labs that can do all of them in one trip ranked first, one SMS, “trips saved” KPI), printable slip with QR, `npm run check:demo` rehearsal test, demo clock (`+1h/+6h/+24h`) driving expiry → radius widening → expiry SMS and day-before reminders.
 How to run, deploy and demo: [README.md](README.md). Module status: [CLAUDE.md](CLAUDE.md).
 
 ---
