@@ -19,7 +19,8 @@ export default async function LoginPage() {
   return (
     <div className="space-y-8">
       <section className="rounded-2xl bg-gradient-to-br from-teal-700 to-teal-900 p-6 text-white shadow">
-        <h1 className="text-3xl font-bold">TestBridge</h1>
+        <h1 className="text-3xl font-bold">Nidaan Setu <span className="font-normal text-teal-100">· निदान सेतु</span></h1>
+        <p className="text-sm text-teal-100">A bridge to faster diagnosis (निदान = diagnosis, सेतु = bridge)</p>
         <p className="mt-1 text-lg text-teal-50">Your doctor stays the same. Only the test moves, to wherever it can be done fastest.</p>
         <p className="mt-1 text-teal-100">आपका डॉक्टर वही रहेगा। सिर्फ़ जाँच वहाँ होगी जहाँ सबसे जल्दी हो सके।</p>
       </section>

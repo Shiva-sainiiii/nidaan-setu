@@ -67,7 +67,7 @@ export function StatusView({ token }: { token: string }) {
     <main className="mx-auto max-w-md space-y-4 px-4 py-5 text-[17px]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 font-bold text-teal-800">
-          <span className="grid h-8 w-8 place-items-center rounded-md bg-teal-700 text-sm text-white">TB</span> TestBridge
+          <span className="grid h-8 w-8 place-items-center rounded-md bg-teal-700 text-sm text-white">NS</span> {lang === "hi" ? "निदान सेतु" : "Nidaan Setu"}
         </div>
         <div className="flex overflow-hidden rounded-full border border-slate-300 text-sm">
           {(["hi", "en"] as const).map((l) => (

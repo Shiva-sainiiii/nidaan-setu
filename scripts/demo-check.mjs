@@ -49,8 +49,8 @@ step("Request visible on Lab B and Lab C");
 const [aB, aC] = [laptop2.getByRole("button", { name: "Accept" }), laptop3.getByRole("button", { name: "Accept" })];
 await Promise.all([aB.dispatchEvent("click"), aC.dispatchEvent("click")]);
 const winnerName = await Promise.race([
-  laptop2.getByText(/Accepted TB-1001/).waitFor().then(() => "B"),
-  laptop3.getByText(/Accepted TB-1001/).waitFor().then(() => "C"),
+  laptop2.getByText(/Accepted NS-1001/).waitFor().then(() => "B"),
+  laptop3.getByText(/Accepted NS-1001/).waitFor().then(() => "C"),
 ]);
 const [win, lose] = winnerName === "B" ? [laptop2, laptop3] : [laptop3, laptop2];
 await lose.getByText(/Already accepted by/).first().waitFor();
@@ -80,7 +80,7 @@ await win.getByText(/patient arrived/).waitFor();
 await win.getByRole("button", { name: "Test done" }).click();
 await win.getByText(/original slot released/).waitFor();
 await win.getByRole("button", { name: "Use sample report" }).click();
-await win.getByText("TB-1001-report.pdf").waitFor();
+await win.getByText("NS-1001-report.pdf").waitFor();
 await win.getByRole("button", { name: "Upload & send" }).click();
 await win.getByText(/report sent to the referring doctor/).waitFor();
 step("Lab: arrived → test done → report uploaded");

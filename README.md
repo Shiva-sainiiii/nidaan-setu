@@ -1,4 +1,4 @@
-# TestBridge
+# Nidaan Setu
 
 > **Your doctor stays the same. Only the test moves, to wherever it can be done fastest.**
 > आपका डॉक्टर वही रहेगा। सिर्फ़ जाँच वहाँ होगी जहाँ सबसे जल्दी हो सके।
@@ -58,7 +58,7 @@ The next patient waiting with no date is **Pooja Rani**: she receives the releas
 | 5 | Laptop 1 | Referral page, then **Hospital queue** | “**Report ready: 14 days earlier**”; original slot moved to Pooja Rani |
 | 6 | Any | **Audit log** | Every action incl. the losing accept and every view of patient data |
 
-**Multi-test bundle (optional extra in the demo):** in *New referral* tick **MRI + CT**. One bundle (e.g. `TB-B501`) is created and the patient gets one SMS.
+**Multi-test bundle (optional extra in the demo):** in *New referral* tick **MRI + CT**. One bundle (e.g. `NS-B501`) is created and the patient gets one SMS.
 Labs that can do both (B, D) see one card with **“Accept all 2 here (one trip)”**; Lab C (MRI only) sees just the MRI, marked “part of bundle”.
 One reply “1” confirms both tests, and the district dashboard counts **patient trips saved**.
 

@@ -1,5 +1,5 @@
 -- =====================================================================
--- TestBridge schema (Postgres 14+; works on Supabase and plain Postgres)
+-- Nidaan Setu schema (Postgres 14+; works on Supabase and plain Postgres)
 -- Re-runnable: drops and recreates schema "tb". ALL DATA IS SYNTHETIC.
 --
 -- Robustness rules:
@@ -87,7 +87,7 @@ create sequence tb.bundle_code_seq start 501;
 -- Several tests ordered together for one patient (one prescription). Each test is still its own referral.
 create table tb.referral_bundles (
   id bigserial primary key,
-  code text not null unique default ('TB-B' || nextval('tb.bundle_code_seq')),
+  code text not null unique default ('NS-B' || nextval('tb.bundle_code_seq')),
   patient_id text references tb.patients(id),
   from_hospital_id text not null references tb.hospitals(id),
   doctor_id text not null references tb.demo_users(id),
@@ -96,7 +96,7 @@ create table tb.referral_bundles (
 
 create table tb.referrals (
   id bigserial primary key,
-  code text not null unique default ('TB-' || nextval('tb.ref_code_seq')),
+  code text not null unique default ('NS-' || nextval('tb.ref_code_seq')),
   bundle_id bigint references tb.referral_bundles(id),
   patient_id text not null references tb.patients(id),
   from_hospital_id text not null references tb.hospitals(id),
@@ -158,7 +158,7 @@ create table tb.messages (
   channel text not null default 'sms',
   body_hi text,
   body_en text not null,
-  dedupe_key text not null unique,     -- e.g. 'accept:TB-1001:1' -> never sent twice
+  dedupe_key text not null unique,     -- e.g. 'accept:NS-1001:1' -> never sent twice
   created_at timestamptz not null
 );
 
@@ -409,10 +409,10 @@ begin
 
   if r.bundle_id is null then  -- bundled tests get one combined SMS from tb.create_bundle
     perform tb.send_msg(pat.id, r.id, 'created:' || r.code,
-      'TestBridge: डॉक्टर ने आपकी ' || (select name_hi from tb.test_types where id = r.test_type_id) ||
+      'निदान सेतु: डॉक्टर ने आपकी ' || (select name_hi from tb.test_types where id = r.test_type_id) ||
         ' जाँच के लिए जल्दी की तारीख माँगी है। तारीख तय होते ही SMS आएगा। आपकी पुरानी तारीख ' ||
         tb.fmt_ts(r.original_slot_at) || ' सुरक्षित है।',
-      'TestBridge: Your doctor has requested an earlier ' || r.test_type_id ||
+      'Nidaan Setu: Your doctor has requested an earlier ' || r.test_type_id ||
         ' slot. We will SMS you when it is booked. Your original date ' || tb.fmt_ts(r.original_slot_at) || ' is kept.');
   end if;
 
@@ -495,9 +495,9 @@ begin
 
   if not p_quiet then
     perform tb.send_msg(r.patient_id, r.id, 'accept:' || r.code || ':' || r.version,
-      'TestBridge: आपकी ' || t.name_hi || ' जाँच ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
+      'निदान सेतु: आपकी ' || t.name_hi || ' जाँच ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
         ' पर तय है। टोकन ' || r.code || '। ' || t.sms_prep_hi || ' पुष्टि के लिए 1 भेजें। /s/' || r.patient_token,
-      'TestBridge: Your ' || t.name_en || ' is booked at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
+      'Nidaan Setu: Your ' || t.name_en || ' is booked at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
         '. Token ' || r.code || '. ' || t.sms_prep_en || ' Reply 1 to confirm. /s/' || r.patient_token);
   end if;
 
@@ -539,8 +539,8 @@ begin
     select * into t from tb.test_types where id = q.test_type_id;
     select * into a from tb.hospitals where id = q.hospital_id;
     perform tb.send_msg(nxt.patient_id, null, 'slot:' || q.id,
-      'TestBridge: ' || a.name || ' में आपकी ' || t.name_hi || ' जाँच की तारीख पहले मिल गई है: ' || tb.fmt_ts(q.slot_at) || '।',
-      'TestBridge: An earlier ' || t.name_en || ' slot opened at ' || a.name || ': ' || tb.fmt_ts(q.slot_at) || '.');
+      'निदान सेतु: ' || a.name || ' में आपकी ' || t.name_hi || ' जाँच की तारीख पहले मिल गई है: ' || tb.fmt_ts(q.slot_at) || '।',
+      'Nidaan Setu: An earlier ' || t.name_en || ' slot opened at ' || a.name || ': ' || tb.fmt_ts(q.slot_at) || '.');
   end if;
   perform tb.audit(p_actor, r.id, 'original_slot_released', null, null,
     jsonb_build_object('slot', tb.fmt_ts(q.slot_at), 'given_to', coalesce(nxt_name, 'no one waiting')), p_idem);
@@ -611,15 +611,15 @@ begin
     perform tb.audit(null, p_ref, 'reopened', 'no_show', 'open',
       jsonb_build_object('reason', 'no-show; offered to labs again'), p_idem, 'system');
     perform tb.send_msg(r.patient_id, r.id, 'noshow:' || r.code || ':' || r.version,
-      'TestBridge: आप जाँच के लिए नहीं पहुँचे। आपकी पुरानी तारीख ' || tb.fmt_ts(r.original_slot_at) || ' सुरक्षित है। नई तारीख मिलने पर SMS आएगा।',
-      'TestBridge: You missed your test. Your original date ' || tb.fmt_ts(r.original_slot_at) || ' is still kept. We will SMS a new slot.');
+      'निदान सेतु: आप जाँच के लिए नहीं पहुँचे। आपकी पुरानी तारीख ' || tb.fmt_ts(r.original_slot_at) || ' सुरक्षित है। नई तारीख मिलने पर SMS आएगा।',
+      'Nidaan Setu: You missed your test. Your original date ' || tb.fmt_ts(r.original_slot_at) || ' is still kept. We will SMS a new slot.');
 
   elsif p_to = 'cancelled' then
     update tb.home_queue set status = 'booked', updated_at = tb.app_now()
      where id = r.original_queue_id and status = 'held_backup';
     perform tb.send_msg(r.patient_id, r.id, 'cancel:' || r.code,
-      'TestBridge: अनुरोध रद्द। अपनी पुरानी तारीख ' || tb.fmt_ts(r.original_slot_at) || ' पर ' || a.name || ' आएँ।',
-      'TestBridge: Request cancelled. Please come to ' || a.name || ' on your original date ' || tb.fmt_ts(r.original_slot_at) || '.');
+      'निदान सेतु: अनुरोध रद्द। अपनी पुरानी तारीख ' || tb.fmt_ts(r.original_slot_at) || ' पर ' || a.name || ' आएँ।',
+      'Nidaan Setu: Request cancelled. Please come to ' || a.name || ' on your original date ' || tb.fmt_ts(r.original_slot_at) || '.');
   end if;
 
   return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'status', p_to));
@@ -660,8 +660,8 @@ begin
   select * into a from tb.hospitals where id = r.from_hospital_id;
   select * into d from tb.demo_users where id = r.doctor_id;
   perform tb.send_msg(r.patient_id, r.id, 'report:' || r.code,
-    'TestBridge: आपकी रिपोर्ट ' || d.name || ' (' || a.name || ') को भेज दी गई है। इलाज वहीं जारी रखें।',
-    'TestBridge: Your report has been sent to ' || d.name || ' at ' || a.name || '. Continue your treatment there.');
+    'निदान सेतु: आपकी रिपोर्ट ' || d.name || ' (' || a.name || ') को भेज दी गई है। इलाज वहीं जारी रखें।',
+    'Nidaan Setu: Your report has been sent to ' || d.name || ' at ' || a.name || '. Continue your treatment there.');
 
   return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'days_earlier', days));
 end $$;
@@ -690,15 +690,15 @@ begin
     end loop;
     if n > 0 then
       perform tb.send_msg(p_patient, r.id, 'reply:' || p_idem,
-        'TestBridge: धन्यवाद, आपकी ' || n || ' जाँच ' || tb.fmt_ts(r.accepted_slot_at) || ' के लिए पक्की है।',
-        'TestBridge: Thank you, your ' || case when n = 1 then 'test' else n || ' tests' end || ' on ' || tb.fmt_ts(r.accepted_slot_at) || ' ' || case when n = 1 then 'is' else 'are' end || ' confirmed.');
+        'निदान सेतु: धन्यवाद, आपकी ' || n || ' जाँच ' || tb.fmt_ts(r.accepted_slot_at) || ' के लिए पक्की है।',
+        'Nidaan Setu: Thank you, your ' || case when n = 1 then 'test' else n || ' tests' end || ' on ' || tb.fmt_ts(r.accepted_slot_at) || ' ' || case when n = 1 then 'is' else 'are' end || ' confirmed.');
       return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'confirmed', n));
     end if;
   end if;
 
   perform tb.send_msg(p_patient, null, 'reply:' || p_idem,
-    'TestBridge: पुष्टि के लिए 1 भेजें। मदद के लिए अपने अस्पताल से संपर्क करें।',
-    'TestBridge: Reply 1 to confirm a booked test. For help, contact your hospital.');
+    'निदान सेतु: पुष्टि के लिए 1 भेजें। मदद के लिए अपने अस्पताल से संपर्क करें।',
+    'Nidaan Setu: Reply 1 to confirm a booked test. For help, contact your hospital.');
   return tb.idem_end(p_idem, '{"ok":true,"confirmed":null}');
 end $$;
 
@@ -725,8 +725,8 @@ begin
         jsonb_build_object('note', 'no lab accepted; patient keeps original date'), null, 'system');
       select * into a from tb.hospitals where id = r.from_hospital_id;
       perform tb.send_msg(r.patient_id, r.id, 'expired:' || r.code,
-        'TestBridge: अभी पास में जल्दी की तारीख नहीं मिली। अपनी पुरानी तारीख ' || tb.fmt_ts(r.original_slot_at) || ' पर ' || a.name || ' आएँ।',
-        'TestBridge: No earlier slot was found nearby. Please keep your original date ' || tb.fmt_ts(r.original_slot_at) || ' at ' || a.name || '.');
+        'निदान सेतु: अभी पास में जल्दी की तारीख नहीं मिली। अपनी पुरानी तारीख ' || tb.fmt_ts(r.original_slot_at) || ' पर ' || a.name || ' आएँ।',
+        'Nidaan Setu: No earlier slot was found nearby. Please keep your original date ' || tb.fmt_ts(r.original_slot_at) || ' at ' || a.name || '.');
       n_exp := n_exp + 1;
     end if;
   end loop;
@@ -740,8 +740,8 @@ begin
   ), ins as (
     insert into tb.messages (referral_id, patient_id, direction, body_hi, body_en, dedupe_key, created_at)
     select d.id, d.patient_id, 'out',
-      'TestBridge याद दिलाना: कल ' || tb.fmt_ts(d.accepted_slot_at) || ' आपकी जाँच है। टोकन ' || d.code || '। आ रहे हैं तो 1 भेजें।',
-      'TestBridge reminder: your test is on ' || tb.fmt_ts(d.accepted_slot_at) || '. Token ' || d.code || '. Reply 1 if you are coming.',
+      'निदान सेतु याद दिलाना: कल ' || tb.fmt_ts(d.accepted_slot_at) || ' आपकी जाँच है। टोकन ' || d.code || '। आ रहे हैं तो 1 भेजें।',
+      'Nidaan Setu reminder: your test is on ' || tb.fmt_ts(d.accepted_slot_at) || '. Token ' || d.code || '. Reply 1 if you are coming.',
       'remind:' || d.code || ':' || d.version, tb.app_now()
     from due d
     on conflict (dedupe_key) do nothing
@@ -810,9 +810,9 @@ begin
   perform tb.audit(p_actor, ids[1], 'bundle_created', null, null,
     jsonb_build_object('bundle', b.code, 'tests', array_to_string(tests, ', '), 'referrals', array_to_string(codes, ', ')), p_idem);
   perform tb.send_msg(first_ref.patient_id, ids[1], 'bundle-created:' || b.code,
-    'TestBridge: डॉक्टर ने आपकी ' || cardinality(tests) || ' जाँचों (' || names_hi || ') के लिए जल्दी की तारीख माँगी है। ' ||
+    'निदान सेतु: डॉक्टर ने आपकी ' || cardinality(tests) || ' जाँचों (' || names_hi || ') के लिए जल्दी की तारीख माँगी है। ' ||
       'कोशिश रहेगी कि सब एक ही जगह, एक ही बार में हो जाएँ। आपकी पुरानी तारीखें सुरक्षित हैं।',
-    'TestBridge: Your doctor requested earlier slots for ' || cardinality(tests) || ' tests (' || names_en || '). ' ||
+    'Nidaan Setu: Your doctor requested earlier slots for ' || cardinality(tests) || ' tests (' || names_en || '). ' ||
       'We try to book them together in one trip. Your original dates are kept.');
   return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'id', ids[1], 'bundle_id', b.id, 'bundle_code', b.code,
     'ids', to_jsonb(ids), 'codes', to_jsonb(codes), 'code', b.code));
@@ -874,13 +874,13 @@ begin
     jsonb_build_object('bundle', b.code, 'lab', h.short_name, 'accepted', array_to_string(done_codes, ', '),
                        'one_trip', cardinality(done_codes), 'skipped', jsonb_array_length(skipped)), p_idem);
   perform tb.send_msg(b.patient_id, first_id, 'bundle-accept:' || b.code || ':' || array_to_string(done_codes, ','),
-    'TestBridge: आपकी ' || names_hi || ' जाँच एक ही बार में ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
+    'निदान सेतु: आपकी ' || names_hi || ' जाँच एक ही बार में ' || h.name || ' में ' || tb.fmt_ts(p_slot) ||
       ' पर तय है। टोकन ' || array_to_string(done_codes, ', ') || '। ' || prep_hi || ' पुष्टि के लिए 1 भेजें। /s/' || first_token,
-    'TestBridge: Your ' || names_en || ' are booked together (one trip) at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
+    'Nidaan Setu: Your ' || names_en || ' are booked together (one trip) at ' || h.name || ' on ' || tb.fmt_ts(p_slot) ||
       '. Tokens ' || array_to_string(done_codes, ', ') || '. ' || prep_en || ' Reply 1 to confirm. /s/' || first_token);
   return tb.idem_end(p_idem, jsonb_build_object('ok', true, 'accepted', to_jsonb(done_codes), 'skipped', skipped,
     'lab', h.short_name, 'code', b.code));
 end $$;
 
 -- Bump when the schema changes: the app rebuilds the (demo) database when it sees an older version.
-comment on schema tb is 'testbridge-schema-v2';
+comment on schema tb is 'nidaansetu-schema-v3';

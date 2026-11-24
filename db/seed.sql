@@ -1,5 +1,5 @@
 -- =====================================================================
--- TestBridge demo seed. ALL NAMES, PHONES AND HOSPITALS ARE FICTIONAL.
+-- Nidaan Setu demo seed. ALL NAMES, PHONES AND HOSPITALS ARE FICTIONAL.
 -- tb.reset_demo() wipes everything (including the audit log; demo only)
 -- and reloads this data with slots relative to today.
 -- Prep text is a draft: have a doctor review it before the demo.

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Every TestBridge screen is live data, so we run fully dynamic (no Cache Components).
+  // Every Nidaan Setu screen is live data, so we run fully dynamic (no Cache Components).
   reactCompiler: true,
   serverExternalPackages: ["pg", "@electric-sql/pglite"],
   // db/*.sql is read at runtime (auto-creates the schema): make sure Vercel ships it.

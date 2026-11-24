@@ -38,7 +38,7 @@ export function AuditView() {
         <LiveBadge stale={stale} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <input className={`${input} max-w-xs`} placeholder="Filter: TB-1001, accept, viewed…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <input className={`${input} max-w-xs`} placeholder="Filter: NS-1001, accept, viewed…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <label className="flex items-center gap-1 text-sm text-slate-600">
           <input type="checkbox" checked={hideViews} onChange={(e) => setHideViews(e.target.checked)} /> hide data views
         </label>

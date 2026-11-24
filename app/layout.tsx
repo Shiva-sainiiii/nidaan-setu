@@ -6,8 +6,8 @@ const sans = Noto_Sans({ variable: "--font-sans-latin", subsets: ["latin"] });
 const deva = Noto_Sans_Devanagari({ variable: "--font-deva", subsets: ["devanagari"], weight: ["400", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "TestBridge",
-  description: "Your doctor stays the same. Only the test moves.",
+  title: "Nidaan Setu",
+  description: "Nidaan Setu (निदान सेतु): your doctor stays the same, only the test moves.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

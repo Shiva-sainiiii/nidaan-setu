@@ -24,8 +24,8 @@ export async function Header() {
       </div>
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2">
         <Link href="/" className="flex items-center gap-2 font-bold text-teal-800">
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-teal-700 text-sm text-white">TB</span>
-          TestBridge
+          <span className="grid h-7 w-7 place-items-center rounded-md bg-teal-700 text-sm text-white">NS</span>
+          Nidaan Setu
         </Link>
         <nav className="flex flex-wrap gap-1 text-sm">
           {(u ? NAV[u.role] ?? [] : []).map((n) => (

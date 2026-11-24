@@ -17,7 +17,7 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((p, i) =>
         /^\/s\/[a-f0-9]{32}$/.test(p) ? (
-          <a key={i} href={p} target="_blank" className="break-all font-semibold text-sky-700 underline">tb.link{p.slice(0, 11)}…</a>
+          <a key={i} href={p} target="_blank" className="break-all font-semibold text-sky-700 underline">ns.link{p.slice(0, 11)}…</a>
         ) : (
           <Fragment key={i}>{p}</Fragment>
         ),
@@ -87,7 +87,7 @@ export function PhonePanel() {
       <div className="mx-auto w-[360px] rounded-[2.5rem] border-[10px] border-slate-900 bg-slate-900 shadow-2xl">
         <div className="flex h-[640px] flex-col overflow-hidden rounded-[1.8rem] bg-[#ece5dd]">
           <div className="bg-teal-800 px-4 py-3 text-white">
-            <div className="text-xs opacity-80">SMS · TestBridge (TB-ALERT)</div>
+            <div className="text-xs opacity-80">SMS · Nidaan Setu (NS-ALERT)</div>
             <div className="font-semibold">{patient?.display_name ?? "…"} <span className="text-xs font-normal opacity-80">{patient?.phone}</span></div>
           </div>
           <div className="flex-1 space-y-2 overflow-y-auto p-3">

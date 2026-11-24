@@ -1,4 +1,4 @@
-# TestBridge — working notes
+# Nidaan Setu — working notes
 
 Hackathon MVP (NexHack 2.0, 24h). Full plan, scope and demo script: [PLAN.md](PLAN.md).
 Pitch: *Your doctor stays the same. Only the test moves.* ALL DATA IS SYNTHETIC.

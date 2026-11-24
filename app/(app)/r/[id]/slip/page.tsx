@@ -23,7 +23,7 @@ export default async function SlipPage({ params }: PageProps<"/r/[id]/slip">) {
       <div className="space-y-4 rounded-xl border-2 border-slate-800 bg-white p-6 text-slate-900">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-wide text-slate-500">TestBridge referral slip · रेफ़रल पर्ची</div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Nidaan Setu (निदान सेतु) referral slip · रेफ़रल पर्ची</div>
             <div className="text-3xl font-black">{r.code}</div>
             <div className="text-sm">{r.patient_name} · {r.test_name} ({r.test_name_hi})</div>
           </div>

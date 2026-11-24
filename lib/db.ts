@@ -18,7 +18,7 @@ export const DB_MODE: "pglite" | "postgres" = urlCheck ? "postgres" : "pglite";
 const DATA_DIR = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
 const SQL_DIR = path.join(process.cwd(), "db");
 /** Must match the `comment on schema tb` line at the end of db/schema.sql. */
-const SCHEMA_VERSION = "testbridge-schema-v2";
+const SCHEMA_VERSION = "nidaansetu-schema-v3";
 const VERSION_SQL = `select coalesce(obj_description(to_regnamespace('tb'), 'pg_namespace'), '') as v`;
 const sqlFile = (f: string) => fs.readFileSync(path.join(SQL_DIR, f), "utf8");
 
@@ -92,10 +92,10 @@ async function makePglite(): Promise<Runner> {
   await db.waitReady;
   const ver = await db.query<{ v: string }>(VERSION_SQL);
   if (ver.rows[0]?.v !== SCHEMA_VERSION) {
-    console.log(`[testbridge] ${ver.rows[0]?.v ? "upgrading" : "creating"} local database in ${DATA_DIR} …`);
+    console.log(`[nidaan-setu] ${ver.rows[0]?.v ? "upgrading" : "creating"} local database in ${DATA_DIR} …`);
     await db.exec(sqlFile("schema.sql"));
     await db.exec(sqlFile("seed.sql"));
-    console.log("[testbridge] local database ready (demo data loaded)");
+    console.log("[nidaan-setu] local database ready (demo data loaded)");
   }
   return async (sql, params) => (await db.query(sql, params)).rows as Rows;
 }

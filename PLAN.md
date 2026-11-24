@@ -1,7 +1,7 @@
-# TestBridge: NexHack 2.0 Tech Lead Plan (24h, team of 4)
+# Nidaan Setu: NexHack 2.0 Tech Lead Plan (24h, team of 4)
 
 ## Context
-Open Innovation track, 24h, judged by faculty and admin. Judges reward a working demo, robustness (recovery, no duplicates, explainable decisions, audit trail) and real-world impact. The team is strong in Next.js, realtime, PWAs, dashboards and maps. TestBridge moves only the diagnostic test from an overloaded government hospital to a partner lab with spare capacity. The report goes back to the original doctor, and the original queue slot goes to the next patient. The working directory is empty (only hello.txt), so this is a greenfield build.
+Open Innovation track, 24h, judged by faculty and admin. Judges reward a working demo, robustness (recovery, no duplicates, explainable decisions, audit trail) and real-world impact. The team is strong in Next.js, realtime, PWAs, dashboards and maps. Nidaan Setu moves only the diagnostic test from an overloaded government hospital to a partner lab with spare capacity. The report goes back to the original doctor, and the original queue slot goes to the next patient. The working directory is empty (only hello.txt), so this is a greenfield build.
 
 **Assumptions**
 - Hackathon runs H0 to H24, starting around 10:00 IST. Each team brings 3+ laptops and 2+ phones.
@@ -33,7 +33,7 @@ How to run, deploy and demo: [README.md](README.md). Module status: [CLAUDE.md](
 
 **Realism (Indian government hospitals)**
 1. **"Why would Lab B accept?" is your biggest hole.** Government labs are overloaded too. Your answer has to be specific: (a) uneven utilisation (some sub-district hospitals or CHCs and PPP diagnostic centres have machines with spare slots; **verify this with your local doctor**, don't assert it); (b) under PPP or free-diagnostics models, volume may be paid per test, so extra referrals can count as revenue or KPI; (c) the DHO dashboard makes utilisation visible. Get **one real quote** from a radiology or lab in-charge before the event.
-2. **Hospital A's queue is usually a paper register.** "Slot released to next patient" only works if A's desk records its queue in TestBridge. Build a minimal **Home Queue** page for A's diagnostic desk, and say this honestly in the pitch.
+2. **Hospital A's queue is usually a paper register.** "Slot released to next patient" only works if A's desk records its queue in Nidaan Setu. Build a minimal **Home Queue** page for A's diagnostic desk, and say this honestly in the pitch.
 3. **Test preparation and safety are missing.** MRI needs a metal or pacemaker check. Contrast CT needs a creatinine test and fasting. Ultrasound abdomen needs a full bladder or fasting. Each test type needs bilingual `prep` text and a "bring: OPD slip, ID, old reports" list in the SMS and on the slip. Judges with medical contacts will notice if it's missing.
 4. **Patient consent is missing.** Under the DPDP Act 2023, sharing data with another facility needs consent. Add a required "Patient consented verbally (Hindi/English script read out)" checkbox to the request form, recorded in the audit log. Optionally, the patient replies YES by SMS.
 5. **Phone numbers are unreliable.** Phones are often shared or belong to a relative, and some patients have none. The doctor **prints a referral slip** with a token, a QR code to the status page, the lab address and prep. The slip works without any phone. This matters more than the WhatsApp integration.
@@ -104,7 +104,7 @@ home_queue(id pk, hospital_id fk, test_type_id fk, patient_id fk, slot_at timest
            status waiting|booked|held_backup|released|used, position int)
            -- A's own register; "next patient" = lowest position with status waiting
 
-referrals(id pk, code 'TB-0042' unique, idem_key uuid unique,
+referrals(id pk, code 'NS-0042' unique, idem_key uuid unique,
           patient_id fk, from_hospital_id fk, doctor_id fk, test_type_id fk,
           priority p1|p2|p3, on_temp_medication bool, note text(280), consent_recorded bool not null,
           max_distance_km int, radius_round int default 1,
@@ -122,7 +122,7 @@ referral_recipients(referral_id fk, hospital_id fk, distance_km numeric, score i
                     PRIMARY KEY(referral_id, hospital_id))
 reports(id pk, referral_id fk UNIQUE, storage_path, reported_by_name, reg_no, uploaded_by fk, uploaded_at)
 messages(id pk, referral_id fk null, patient_id fk, direction out|in, channel sms|whatsapp,
-         lang, body, dedupe_key text UNIQUE, created_at)    -- dedupe_key e.g. 'accept:TB-0042'
+         lang, body, dedupe_key text UNIQUE, created_at)    -- dedupe_key e.g. 'accept:NS-0042'
 audit_log(id bigserial pk, at timestamptz default now(), actor_id, actor_role, actor_hospital_id,
           referral_id null, action text, from_status, to_status, details jsonb, idem_key null)
   -- append-only: REVOKE UPDATE, DELETE; BEFORE UPDATE OR DELETE trigger raises exception
@@ -255,7 +255,7 @@ Client idempotency: each form or button generates a `crypto.randomUUID()` when i
 - **Speaker:** P4 narrates. Before going on: Reset demo, all screens logged in.
 
 **0:00–0:40, Problem (P4):**
-"Ramesh-ji, 58, has severe back pain. His doctor at a government hospital orders an MRI. The hospital's MRI queue is 14 days [PLACEHOLDER: real quote — 'At our hospital MRI waiting is __ days' — Dr. ___, ___ Hospital]. For those 14 days he's on painkillers and his treatment is paused. A hospital 12 km away has free MRI slots this week, but there's no way to use them. TestBridge fixes that. *Your doctor stays the same. Only the test moves.*"
+"Ramesh-ji, 58, has severe back pain. His doctor at a government hospital orders an MRI. The hospital's MRI queue is 14 days [PLACEHOLDER: real quote — 'At our hospital MRI waiting is __ days' — Dr. ___, ___ Hospital]. For those 14 days he's on painkillers and his treatment is paused. A hospital 12 km away has free MRI slots this week, but there's no way to use them. Nidaan Setu fixes that. *Your doctor stays the same. Only the test moves.*"
 
 **0:40–1:30, Create (P2 on Laptop 1):**
 "I'm Dr. Mehta at Hospital A. Patient's mobile, test MRI, our queue says original slot 8 December. Priority P2, and he's on temporary medication, which we flag. The patient consented; we tick that and it's logged. The system already shows 3 partner labs within 25 km, 2 of them free. Send."
@@ -273,7 +273,7 @@ Client idempotency: each form or button generates a `crypto.randomUUID()` when i
 Open the audit log. "Every action: who, which role, when, from which state to which, including Lab C's failed attempt and every time someone viewed patient data. Priority is set by the doctor and visible to everyone, so queue-jumping is auditable." (If S3 is done: 10s on the DHO dashboard.)
 
 **4:40–5:00, Close (P4):**
-"Ramesh-ji saved 14 days on painkillers. Hospital A's queue got shorter. No new machines, no app for the patient, no integration with hospital systems on day one. Next: ABHA linking and a pilot in one district. TestBridge: only the test moves."
+"Ramesh-ji saved 14 days on painkillers. Hospital A's queue got shorter. No new machines, no app for the patient, no integration with hospital systems on day one. Next: ABHA linking and a pilot in one district. Nidaan Setu: only the test moves."
 
 **If venue Wi-Fi fails**
 1. **Primary backup:** two phone hotspots on different carriers (Jio + Airtel), pre-paired on all devices. Vercel + Supabase work over 4G.

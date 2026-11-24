@@ -1,10 +1,10 @@
-# TestBridge — MVP build prompt (paste into any AI coding agent)
+# Nidaan Setu — MVP build prompt (paste into any AI coding agent)
 
 ## Context
-You are building **TestBridge**, a hackathon MVP for Indian government hospitals.
+You are building **Nidaan Setu**, a hackathon MVP for Indian government hospitals.
 Pitch: **"Your doctor stays the same. Only the test moves."**
 
-Problem: a patient at an overloaded government hospital (Hospital A) waits ~14 days for a diagnostic test (MRI, CT, ultrasound). Nearby partner hospitals/labs (B–F) have spare slots this week. TestBridge lets A's doctor broadcast the test to nearby labs. The first lab to accept gets it. The patient gets an SMS (simulated). The lab uploads the report, which goes back to A's doctor. A's original queue slot is released to the next waiting patient.
+Problem: a patient at an overloaded government hospital (Hospital A) waits ~14 days for a diagnostic test (MRI, CT, ultrasound). Nearby partner hospitals/labs (B–F) have spare slots this week. Nidaan Setu lets A's doctor broadcast the test to nearby labs. The first lab to accept gets it. The patient gets an SMS (simulated). The lab uploads the report, which goes back to A's doctor. A's original queue slot is released to the next waiting patient.
 
 All data is **synthetic**. There is no real auth and no real SMS. Show a "Synthetic demo data" banner on every page.
 
@@ -28,7 +28,7 @@ hospital_tests(hospital_id, test_type_id, is_free, price_inr, current_wait_days)
 demo_users(id, name, role doctor|lab|dho, hospital_id)
 patients(id, display_name, phone, lang hi|en)
 home_queue(id, hospital_id, test_type_id, patient_id, slot_at, status waiting|booked|held_backup|released|used, position)
-referrals(id, code 'TB-0001', patient_id, from_hospital_id, doctor_id, test_type_id,
+referrals(id, code 'NS-0001', patient_id, from_hospital_id, doctor_id, test_type_id,
           priority p1|p2|p3, on_temp_medication, note, consent_recorded NOT NULL,
           max_distance_km, original_queue_id, original_slot_at, status, version,
           accepted_hospital_id, accepted_slot_at, accepted_at, patient_token unique,
