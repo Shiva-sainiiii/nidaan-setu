@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLive } from "@/lib/useLive";
 import { fmtDT } from "@/lib/format";
+import { LogoMark } from "@/components/Logo";
 
 type S = {
   code: string; status: string; accepted_slot_at: string | null; original_slot_at: string; updated_at: string;
@@ -64,14 +65,14 @@ export function StatusView({ token }: { token: string }) {
   const ended = s.status === "expired" || s.status === "cancelled";
 
   return (
-    <main className="mx-auto max-w-md space-y-4 px-4 py-5 text-[17px]">
+    <main lang={lang} className="mx-auto max-w-md space-y-4 px-4 py-5 text-[17px]">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 font-bold text-teal-800">
-          <span className="grid h-8 w-8 place-items-center rounded-md bg-teal-700 text-sm text-white">NS</span> {lang === "hi" ? "निदान सेतु" : "Nidaan Setu"}
+        <div className="flex items-center gap-2 font-bold text-brand-800">
+          <LogoMark /> {lang === "hi" ? "निदान सेतु" : "Nidaan Setu"}
         </div>
         <div className="flex overflow-hidden rounded-full border border-slate-300 text-sm">
           {(["hi", "en"] as const).map((l) => (
-            <button key={l} onClick={() => setLang(l)} className={`px-3 py-1 ${lang === l ? "bg-teal-700 text-white" : "bg-white"}`}>
+            <button key={l} onClick={() => setLang(l)} aria-pressed={lang === l} lang={l} className={`min-h-11 px-4 ${lang === l ? "bg-brand-700 text-white" : "bg-white"}`}>
               {l === "hi" ? "हिंदी" : "English"}
             </button>
           ))}
@@ -89,7 +90,7 @@ export function StatusView({ token }: { token: string }) {
         <ol className="space-y-2 rounded-2xl bg-white p-4 shadow-sm">
           {t.steps.map((label, i) => (
             <li key={i} className="flex items-center gap-3">
-              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${i <= step ? "bg-teal-700 text-white" : "bg-slate-200 text-slate-500"}`}>
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${i <= step ? "bg-brand-700 text-white" : "bg-slate-200 text-slate-500"}`}>
                 {i <= step ? "✓" : i + 1}
               </span>
               <span className={i <= step ? "font-semibold" : "text-slate-500"}>{label}</span>
@@ -112,23 +113,23 @@ export function StatusView({ token }: { token: string }) {
         </div>
       )}
       {booked && s.lab_name && (
-        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm ring-2 ring-teal-600">
+        <div className="space-y-2 rounded-2xl bg-white p-4 shadow-sm ring-2 ring-brand-600">
           <div className="text-sm text-slate-500">{t.goTo}</div>
           <div className="text-2xl font-bold">{fmtDT(s.accepted_slot_at)}</div>
           <div className="text-lg font-semibold">{s.lab_name}</div>
           <div className="text-slate-700">{lang === "hi" ? s.lab_address_hi : s.lab_address_en}</div>
           <div className="text-sm">{s.lab_is_free ? t.free : t.paid(s.lab_price ?? 0)}</div>
           <div className="flex gap-2 pt-1">
-            <a className="flex-1 rounded-xl bg-teal-700 py-2 text-center font-semibold text-white" target="_blank"
+            <a className="flex-1 rounded-xl bg-brand-700 py-2 text-center font-semibold text-white" target="_blank"
               href={`https://www.google.com/maps/search/?api=1&query=${s.lab_lat},${s.lab_lng}`}>📍 {t.map}</a>
-            <a className="flex-1 rounded-xl border border-teal-700 py-2 text-center font-semibold text-teal-800" href={`tel:${s.lab_phone}`}>📞 {t.call}</a>
+            <a className="flex-1 rounded-xl border border-brand-700 py-2 text-center font-semibold text-brand-800" href={`tel:${s.lab_phone}`}>📞 {t.call}</a>
           </div>
           <div className={`rounded-lg p-2 text-sm ${s.status === "arrived" || s.confirmed ? "bg-emerald-50 text-emerald-900" : "bg-amber-50 text-amber-900"}`}>
             {s.status === "arrived" ? t.atLab : s.confirmed ? t.confirmed : t.confirmHint}
           </div>
         </div>
       )}
-      {s.status === "test_done" && <div className="rounded-2xl bg-teal-50 p-4 font-semibold ring-1 ring-teal-200">{t.done}</div>}
+      {s.status === "test_done" && <div className="rounded-2xl bg-brand-50 p-4 font-semibold ring-1 ring-brand-200">{t.done}</div>}
       {(s.status === "report_sent" || s.status === "closed") && (
         <div className="rounded-2xl bg-emerald-50 p-4 font-semibold ring-1 ring-emerald-300">{t.reportSent(s.doctor_name, s.from_name)}</div>
       )}

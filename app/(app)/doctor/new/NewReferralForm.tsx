@@ -87,7 +87,7 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
       <Card className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">1. Patient</h2>
-          <button type="button" className="text-xs text-teal-700 underline"
+          <button type="button" className="inline-flex min-h-11 items-center px-1 text-sm font-medium text-brand-700 underline"
             onClick={() => { setPhone(DEMO_PATIENT.phone); setNote(DEMO_PATIENT.note); setTempMed(true); setTests(["MRI"]); }}>
             Use demo patient (Ramesh Kumar)
           </button>
@@ -141,7 +141,7 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
           <div className="mb-1 text-sm">Tests ordered <span className="text-slate-500">(tick all that apply: we try to book them together, one trip)</span></div>
           <div className="grid gap-2 sm:grid-cols-2">
             {allTests.map((t) => (
-              <label key={t.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm ${tests.includes(t.id) ? "border-teal-600 bg-teal-50" : "border-slate-300 bg-white"}`}>
+              <label key={t.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm ${tests.includes(t.id) ? "border-brand-600 bg-brand-50" : "border-slate-300 bg-white"}`}>
                 <input type="checkbox" checked={tests.includes(t.id)} onChange={() => toggle(t.id)} />
                 <span className="font-medium">{t.name_en}</span>
                 {t.current_wait_days != null && <span className="ml-auto text-xs text-slate-500">your queue: {t.current_wait_days} d</span>}
@@ -149,7 +149,7 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
             ))}
           </div>
           {tests.length > 1 && (
-            <p className="mt-1 text-xs text-teal-800">{tests.length} tests → one bundle for this patient. One SMS; labs that can do all of them are shown first.</p>
+            <p className="mt-1 text-xs text-brand-800">{tests.length} tests → one bundle for this patient. One SMS; labs that can do all of them are shown first.</p>
           )}
         </div>
         {needsWait && (
@@ -164,7 +164,7 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
           <div className="grid gap-2 sm:grid-cols-3">
             {(["P1", "P2", "P3"] as const).map((p) => (
               <button type="button" key={p} onClick={() => setPriority(p)}
-                className={`rounded-lg border p-2 text-left text-sm ${priority === p ? "border-teal-600 bg-teal-50 ring-2 ring-teal-600/30" : "border-slate-300 bg-white"}`}>
+                className={`rounded-lg border p-2 text-left text-sm ${priority === p ? "border-brand-600 bg-brand-50 ring-2 ring-brand-600/30" : "border-slate-300 bg-white"}`}>
                 <div className="font-semibold">{PRIORITY[p].label}</div>
                 <div className="text-xs text-slate-500">{PRIORITY[p].desc}</div>
               </button>
@@ -184,7 +184,7 @@ export function NewReferralForm({ tests: allTests }: { tests: Test[] }) {
       <Card className="space-y-3">
         <h2 className="font-semibold">3. Where to look</h2>
         <label className="block text-sm">Maximum travel distance: <b>{maxKm} km</b>
-          <input type="range" min={5} max={60} step={5} value={maxKm} onChange={(e) => setMaxKm(Number(e.target.value))} className="w-full accent-teal-700" />
+          <input type="range" min={5} max={60} step={5} value={maxKm} onChange={(e) => setMaxKm(Number(e.target.value))} className="w-full accent-brand-700" />
         </label>
         <div className="text-sm">
           <b>{labs.length}</b> partner lab{labs.length === 1 ? "" : "s"} within {maxKm} km

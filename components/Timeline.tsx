@@ -20,7 +20,7 @@ const tone = (a: string) =>
         ? "bg-fuchsia-500"
         : a === "report_sent"
           ? "bg-emerald-500"
-          : "bg-teal-600";
+          : "bg-brand-600";
 
 export function Timeline({ rows, showViews = false }: { rows: AuditRow[]; showViews?: boolean }) {
   const list = showViews ? rows : rows.filter((r) => !r.action.startsWith("viewed"));

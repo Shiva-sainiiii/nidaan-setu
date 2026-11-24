@@ -18,7 +18,7 @@ const tone = (a: string) =>
   : a.startsWith("viewed") ? "bg-slate-100 text-slate-600"
   : a.includes("slot") ? "bg-fuchsia-100 text-fuchsia-800"
   : a === "report_sent" ? "bg-emerald-100 text-emerald-800"
-  : "bg-teal-50 text-teal-800";
+  : "bg-brand-50 text-brand-800";
 
 export function AuditView() {
   const [filter, setFilter] = useState("");
@@ -38,7 +38,7 @@ export function AuditView() {
         <LiveBadge stale={stale} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <input className={`${input} max-w-xs`} placeholder="Filter: NS-1001, accept, viewed…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+        <input aria-label="Filter audit log" className={`${input} max-w-xs`} placeholder="Filter: NS-1001, accept, viewed…" value={filter} onChange={(e) => setFilter(e.target.value)} />
         <label className="flex items-center gap-1 text-sm text-slate-600">
           <input type="checkbox" checked={hideViews} onChange={(e) => setHideViews(e.target.checked)} /> hide data views
         </label>
@@ -67,7 +67,7 @@ export function AuditView() {
                   <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${tone(r.action)}`}>{ACTION_LABEL[r.action] ?? r.action}</span>
                 </td>
                 <td className="px-3 py-1.5">
-                  {r.referral_code ? <Link href={`/r/${r.referral_id}`} className="text-teal-700 hover:underline">{r.referral_code}</Link> : "—"}
+                  {r.referral_code ? <Link href={`/r/${r.referral_id}`} className="text-brand-700 hover:underline">{r.referral_code}</Link> : "—"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-1.5 text-xs text-slate-600">
                   {r.from_status || r.to_status ? `${r.from_status ?? "—"} → ${r.to_status ?? "—"}` : ""}

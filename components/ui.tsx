@@ -28,7 +28,7 @@ export function TempMedBadge() {
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>{children}</div>;
+  return <div className={`rounded-lg border border-slate-300 bg-white p-4 ${className}`}>{children}</div>;
 }
 
 export function Alert({ kind = "info", children }: { kind?: "info" | "error" | "success" | "warn"; children: ReactNode }) {
@@ -38,7 +38,7 @@ export function Alert({ kind = "info", children }: { kind?: "info" | "error" | "
     success: "bg-emerald-50 text-emerald-900 border-emerald-300",
     warn: "bg-amber-50 text-amber-900 border-amber-300",
   }[kind];
-  return <div className={`rounded-lg border px-3 py-2 text-sm ${cls}`}>{children}</div>;
+  return <div role={kind === "error" ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-sm ${cls}`}>{children}</div>;
 }
 
 export type Score = { total: number; parts: { label: string; pts: number }[] };
@@ -60,17 +60,18 @@ export function ScoreBreakdown({ score }: { score: Score }) {
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <Card className="!p-3">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">{label}</div>
       <div className="mt-1 text-2xl font-bold text-slate-900">{value}</div>
-      {hint && <div className="text-xs text-slate-500">{hint}</div>}
+      {hint && <div className="text-xs text-slate-600">{hint}</div>}
     </Card>
   );
 }
 
+// 44px minimum touch target on every control (WCAG 2.5.5); visible focus ring comes from globals.css.
 export const btn =
-  "inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50";
-export const btnPrimary = `${btn} bg-teal-700 text-white hover:bg-teal-800`;
-export const btnSecondary = `${btn} border border-slate-300 bg-white text-slate-800 hover:bg-slate-50`;
-export const btnDanger = `${btn} border border-rose-300 bg-white text-rose-700 hover:bg-rose-50`;
+  "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+export const btnPrimary = `${btn} bg-brand-700 text-white hover:bg-brand-800 active:bg-brand-900`;
+export const btnSecondary = `${btn} border border-slate-400 bg-white text-slate-900 hover:bg-slate-50 active:bg-slate-100`;
+export const btnDanger = `${btn} border border-rose-400 bg-white text-rose-800 hover:bg-rose-50`;
 export const input =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20";
+  "min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/25";

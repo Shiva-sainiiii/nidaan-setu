@@ -74,7 +74,7 @@ export function BundleCard({ items, serverNow, onResult }: { items: Incoming[]; 
                   </div>
                   <ScoreBreakdown score={it.score} />
                 </div>
-                <button className={`${btnSecondary} !py-1 text-xs`} disabled={pending} onClick={() => acceptOne(it)}>Accept only this</button>
+                <button className={`${btnSecondary}`} disabled={pending} onClick={() => acceptOne(it)}>Accept only this</button>
               </li>
             ))}
           </ul>

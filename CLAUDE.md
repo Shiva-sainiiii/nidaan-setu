@@ -22,11 +22,18 @@ npm run build && npm start   # production, 0.0.0.0:$PORT
 npm run db:reset   # local mode: delete ./.data (STOP the app first); Postgres mode: apply schema+seed
 npm run db:docker  # optional Docker Postgres (then set DATABASE_URL)
 npm run check:demo # full demo rehearsal in headless Chrome (RESETS demo data)
+npm run check:bundle # same for the multi-test bundle flow
 npm run start:lan  # production build on 0.0.0.0:3000 (no-Wi-Fi fallback)
 ```
 
 ## Schema changes
 Bump `SCHEMA_VERSION` in [lib/db.ts](lib/db.ts) **and** the `comment on schema tb` line at the end of `db/schema.sql` together. The app then rebuilds the demo database automatically (local and Supabase).
+
+## UI design rules (government / public-service look)
+- Colours: `brand-*` navy (tokens in [app/globals.css](app/globals.css)) for identity and primary actions; emerald/amber/rose/sky **only** for status meaning; `india-*` only for the thin tricolour strip. No gradients.
+- Every button/link/input is at least 44px tall (`min-h-11`); never remove the focus outline; body text 16px, nothing below 12px.
+- Icons are SVG (no emoji as icons). Hindi text gets `lang="hi"`.
+- Honest identity: "Pilot concept · synthetic demo data · not an official government service". No national emblem.
 
 ## Rules
 - Never write referral state from TS directly; add/extend a `tb.*` function instead.

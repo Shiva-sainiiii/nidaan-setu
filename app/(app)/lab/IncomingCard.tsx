@@ -80,7 +80,7 @@ export function IncomingCard({ r, serverNow, onResult }: { r: Incoming; serverNo
           <button className={btnPrimary} disabled={pending} onClick={accept}>
             {pending ? "Accepting…" : "Accept"}
           </button>
-          <button className={`${btnSecondary} !py-1 text-xs`} disabled={pending} onClick={decline}>Decline</button>
+          <button className={`${btnSecondary}`} disabled={pending} onClick={decline}>Decline</button>
         </div>
       </div>
     </Card>

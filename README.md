@@ -25,7 +25,7 @@ npm run dev                     # http://localhost:3000
 On first start the app creates its database in `./.data/pglite` (PGlite: real Postgres running inside Node)
 and loads the demo data. Data survives restarts.
 
-- During a demo: **Demo ⚙ → Reset demo data** (header).
+- During a demo: **Demo controls → Reset demo data** (header).
 - Wipe completely: stop the app, `npm run db:reset`, start again.
 - Optional: use a real Postgres instead (Supabase or Docker): set `DATABASE_URL` in `.env.local`, then `npm run db:reset` applies the schema there.
 
@@ -67,7 +67,7 @@ The “days earlier” number is computed (original slot date − actual test da
 **Robustness moments to show:** two labs racing; double-click / refresh changes nothing; out-of-order buttons are disabled
 and also rejected by the database; audit log is append-only (try `update tb.audit_log …`: the database refuses).
 
-**Extra demo controls (Demo ⚙):** `+1h / +6h / +24h` moves the demo clock. An unaccepted request first **widens its radius**,
+**Extra demo controls (Demo controls):** `+1h / +6h / +24h` moves the demo clock. An unaccepted request first **widens its radius**,
 then **expires** (“keep your original date” SMS). A booked patient gets a **day-before reminder**. Lab **No-show** puts the
 request back to open while the original slot stays held.
 
@@ -76,6 +76,7 @@ request back to open while the original slot stays held.
 npm run check:demo      # needs the app running + Chrome at /usr/bin/google-chrome (or CHROME=/path)
 ```
 It presses **Reset demo data**, then plays the whole flow above across 4 simulated devices and prints `PASS`.
+`npm run check:bundle` does the same for the multi-test bundle (MRI + CT, one trip).
 **It resets the demo data**, so run it before you set up the real devices, not during the demo.
 
 ---

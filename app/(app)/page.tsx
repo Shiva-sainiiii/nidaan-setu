@@ -18,11 +18,11 @@ export default async function LoginPage() {
   ];
   return (
     <div className="space-y-8">
-      <section className="rounded-2xl bg-gradient-to-br from-teal-700 to-teal-900 p-6 text-white shadow">
-        <h1 className="text-3xl font-bold">Nidaan Setu <span className="font-normal text-teal-100">· निदान सेतु</span></h1>
-        <p className="text-sm text-teal-100">A bridge to faster diagnosis (निदान = diagnosis, सेतु = bridge)</p>
-        <p className="mt-1 text-lg text-teal-50">Your doctor stays the same. Only the test moves, to wherever it can be done fastest.</p>
-        <p className="mt-1 text-teal-100">आपका डॉक्टर वही रहेगा। सिर्फ़ जाँच वहाँ होगी जहाँ सबसे जल्दी हो सके।</p>
+      <section className="rounded-lg border-l-8 border-india-saffron bg-brand-800 p-6 text-white">
+        <h1 className="text-3xl font-bold">Nidaan Setu <span className="font-normal text-brand-100">· निदान सेतु</span></h1>
+        <p className="text-sm text-brand-100">A bridge to faster diagnosis (निदान = diagnosis, सेतु = bridge)</p>
+        <p className="mt-1 text-lg text-brand-50">Your doctor stays the same. Only the test moves, to wherever it can be done fastest.</p>
+        <p lang="hi" className="mt-1 text-brand-100">आपका डॉक्टर वही रहेगा। सिर्फ़ जाँच वहाँ होगी जहाँ सबसे जल्दी हो सके।</p>
       </section>
 
       {groups.map(([title, sub, rows]) => (
@@ -33,7 +33,7 @@ export default async function LoginPage() {
             {rows.map((u) => (
               <form key={u.id} action={loginAs}>
                 <input type="hidden" name="id" value={u.id} />
-                <button className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-teal-500 hover:shadow">
+                <button className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-500 hover:shadow">
                   <div className="font-semibold">{u.name}</div>
                   <div className="text-sm text-slate-500">
                     {u.hospital ?? "Demo District"}
@@ -50,11 +50,11 @@ export default async function LoginPage() {
       <section>
         <h2 className="text-lg font-semibold">No login needed</h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href="/phone" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-teal-500">
+          <Link href="/phone" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-500">
             <div className="font-semibold">Patient phone (simulated SMS)</div>
             <div className="text-sm text-slate-500">What the patient receives, in Hindi and English</div>
           </Link>
-          <Link href="/audit" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-teal-500">
+          <Link href="/audit" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-500">
             <div className="font-semibold">Audit log</div>
             <div className="text-sm text-slate-500">Every action, append-only</div>
           </Link>

@@ -86,7 +86,7 @@ export function TodayCard({ r, onResult }: { r: Today; onResult: (t: Toast) => v
               <span className="ml-2 text-xs text-slate-500">(this view is logged)</span>
             </div>
           ) : (
-            <button className="text-sm text-teal-700 underline" disabled={pending} onClick={show}>Show patient details</button>
+            <button className="text-sm text-brand-700 underline" disabled={pending} onClick={show}>Show patient details</button>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -100,10 +100,10 @@ export function TodayCard({ r, onResult }: { r: Today; onResult: (t: Toast) => v
       </div>
 
       {canUpload && (
-        <div className="mt-3 grid gap-2 rounded-lg border border-teal-200 bg-teal-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
+        <div className="mt-3 grid gap-2 rounded-lg border border-brand-200 bg-brand-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
           <label className="text-xs">Report PDF
-            <input type="file" accept="application/pdf" className={`${input} !py-1`} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            {file && <span className="text-teal-800">{file.name}</span>}
+            <input type="file" accept="application/pdf" className={`${input} file:mr-3 file:rounded file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:font-semibold file:text-brand-800`} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            {file && <span className="text-brand-800">{file.name}</span>}
           </label>
           <label className="text-xs">Reporting doctor
             <input className={input} value={reportedBy} onChange={(e) => setReportedBy(e.target.value)} placeholder="Dr. …" />
@@ -113,7 +113,7 @@ export function TodayCard({ r, onResult }: { r: Today; onResult: (t: Toast) => v
           </label>
           <div className="flex flex-col justify-end gap-1">
             <button className={btnPrimary} disabled={pending || !file} onClick={upload}>Upload & send</button>
-            <button className={`${btnSecondary} !py-1 text-xs`} disabled={pending} onClick={useSample}>Use sample report</button>
+            <button className={`${btnSecondary}`} disabled={pending} onClick={useSample}>Use sample report</button>
           </div>
         </div>
       )}

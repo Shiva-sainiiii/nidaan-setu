@@ -22,9 +22,9 @@ async function device(name, login) {
 
 // Before going on: Reset demo via the UI button
 const laptop1 = await device("doctor", "Dr. A. Mehta");
-await laptop1.getByText(/^Demo ⚙/).click();
+await laptop1.getByText(/^Demo controls/).click();
 await laptop1.getByRole("button", { name: "Reset demo data" }).click();
-await laptop1.getByText("Reset ✓").waitFor();
+await laptop1.getByText(/Reset: done/).waitFor();
 await laptop1.reload();
 const laptop2 = await device("labB", "Lab desk, Sarvodaya SDH");
 const laptop3 = await device("labC", "Lab desk, Navjeevan CHC");
@@ -69,12 +69,12 @@ step("Patient phone got Hindi+English booking SMS");
 await laptop1.goto(`${B}/r/1/slip`);
 await laptop1.locator("img[alt^='QR']").waitFor();
 step("Slip with QR shown");
-await phone.getByTitle("Reply 1 to confirm").click();
+await phone.getByRole("button", { name: "Reply 1 to confirm" }).click();
 await phone.getByText(/is confirmed/).first().waitFor();
 step("Patient replied 1 → confirmed");
 
 // 3:10 Test and report
-await win.getByRole("button", { name: /Booked \/ today/ }).click();
+await win.getByRole("tab", { name: /Booked \/ today/ }).click();
 await win.getByRole("button", { name: "Arrived" }).click();
 await win.getByText(/patient arrived/).waitFor();
 await win.getByRole("button", { name: "Test done" }).click();

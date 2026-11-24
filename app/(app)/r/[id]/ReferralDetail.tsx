@@ -155,7 +155,7 @@ export function ReferralDetail({ id, role }: { id: number; role: string }) {
               <ul className="space-y-1.5 text-sm">
                 {data.siblings.map((s) => (
                   <li key={s.id} className="flex flex-wrap items-center justify-between gap-2">
-                    <Link href={`/r/${s.id}`} className="font-medium text-teal-800 hover:underline">{s.test_name} <span className="text-xs text-slate-500">{s.code}</span></Link>
+                    <Link href={`/r/${s.id}`} className="font-medium text-brand-800 hover:underline">{s.test_name} <span className="text-xs text-slate-500">{s.code}</span></Link>
                     <StatusChip status={s.status} />
                     {s.lab_name && <span className="w-full text-xs text-slate-500">{s.lab_name} · {fmtDT(s.accepted_slot_at)}</span>}
                   </li>

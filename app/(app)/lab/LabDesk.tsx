@@ -81,10 +81,10 @@ export function LabDesk({ hospital }: { hospital: string }) {
       {error && <Alert kind="error">{error}</Alert>}
       {toast && <div className="sticky top-24 z-10"><Alert kind={toast.kind}>{toast.text}</Alert></div>}
 
-      <div className="flex gap-1 border-b border-slate-200">
+      <div role="tablist" aria-label="Lab desk sections" className="flex gap-1 border-b border-slate-300">
         {tabs.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-semibold ${tab === t.id ? "border-teal-700 text-teal-800" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+          <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+            className={`-mb-px min-h-11 border-b-[3px] px-3 text-sm font-semibold ${tab === t.id ? "border-brand-700 text-brand-800" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
             {t.label}
             {t.n != null && (
               <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${t.id === "incoming" && t.n > 0 ? "bg-amber-500 text-white" : "bg-slate-200 text-slate-700"}`}>{t.n}</span>
@@ -140,7 +140,7 @@ export function LabDesk({ hospital }: { hospital: string }) {
               <span><b>{d.code}</b> · {d.test_type_id} · from {d.from_name} · {fmtDT(d.accepted_slot_at)}</span>
               <span className="flex items-center gap-2">
                 <StatusChip status={d.status} />
-                <a href={`/api/reports/${d.id}`} target="_blank" className="text-teal-700 underline">Report</a>
+                <a href={`/api/reports/${d.id}`} target="_blank" className="text-brand-700 underline">Report</a>
               </span>
             </li>
           ))}

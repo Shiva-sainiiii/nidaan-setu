@@ -63,7 +63,7 @@ export function DoctorHome({ hospital }: { hospital: string }) {
             {data?.referrals.map((r) => (
               <tr key={`${r.id}-${r.status}`} className={`${recent(r.updated_at) ? "flash-in" : ""} border-t border-slate-100 hover:bg-slate-50`}>
                 <td className="px-3 py-2">
-                  <Link href={`/r/${r.id}`} className="font-semibold text-teal-800 hover:underline">{r.code}</Link>
+                  <Link href={`/r/${r.id}`} className="font-semibold text-brand-800 hover:underline">{r.code}</Link>
                   <div className="mt-0.5 flex flex-wrap gap-1"><PriorityChip p={r.priority} />
                     {r.bundle_code && <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-bold text-white" title="Several tests for this patient">{r.bundle_code}</span>}
                   </div>

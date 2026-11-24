@@ -1,15 +1,62 @@
 @import "tailwindcss";
 
+/*
+ * Nidaan Setu design tokens: a calm public-service look.
+ *  - brand: deep navy (trust, official). White text on brand-700+ is >= 9:1 contrast.
+ *  - status colours (emerald / amber / rose / sky) are used ONLY to convey meaning.
+ *  - india-*: a thin tricolour accent strip, never as large fills.
+ */
 @theme inline {
   --font-sans: var(--font-sans-latin), var(--font-deva), system-ui, sans-serif;
+
+  --color-brand-50: #eef4fa;
+  --color-brand-100: #d9e6f2;
+  --color-brand-200: #b3cde5;
+  --color-brand-300: #84acd3;
+  --color-brand-400: #5287bd;
+  --color-brand-500: #2f68a3;
+  --color-brand-600: #1f5288;
+  --color-brand-700: #17426f;
+  --color-brand-800: #12365b;
+  --color-brand-900: #0e2a47;
+
+  --color-india-saffron: #ff9933;
+  --color-india-green: #138808;
 }
 
-/* Light theme only: projector-friendly. */
-:root { color-scheme: light; }
-body { font-family: var(--font-sans); }
+/* Light theme only: projector- and print-friendly. */
+:root {
+  color-scheme: light;
+}
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
 
-@keyframes flash-in { from { background-color: #fef3c7; } to { background-color: #fff; } }
-.flash-in { animation: flash-in 2.5s ease-out; }
+/* Clearly visible keyboard focus everywhere (WCAG 2.4.7), never removed. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@keyframes flash-in {
+  from { background-color: #fff4d6; }
+  to { background-color: #fff; }
+}
+.flash-in {
+  animation: flash-in 2.5s ease-out;
+}
+
+/* Respect "reduce motion" (no flashing rows or pulsing dots). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 @media print {
   .no-print { display: none !important; }

@@ -6,7 +6,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <Header />
-      <main className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
+      <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6">{children}</main>
     </>
   );
 }
