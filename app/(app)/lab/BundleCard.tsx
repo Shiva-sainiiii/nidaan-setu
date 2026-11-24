@@ -7,6 +7,7 @@ import { relTime } from "@/lib/format";
 import { Card, PriorityChip, ScoreBreakdown, TempMedBadge, btnPrimary, btnSecondary, input } from "@/components/ui";
 import { tomorrow10, type Incoming } from "./IncomingCard";
 import type { Toast } from "./LabDesk";
+import { Icon } from "@/components/Icon";
 
 export const ONE_TRIP_BONUS = 20;
 
@@ -53,7 +54,7 @@ export function BundleCard({ items, serverNow, onResult }: { items: Incoming[]; 
           </div>
           {allHere ? (
             <div className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm text-emerald-900">
-              ✅ You can do <b>all {items.length} open tests</b>: the patient needs only <b>one trip</b>.{" "}
+              <Icon name="checkCircle" size={18} className="mr-1 inline -mt-0.5 text-emerald-700" />You can do <b>all {items.length} open tests</b>: the patient needs only <b>one trip</b>.{" "}
               <span className="font-semibold">One-trip bonus +{ONE_TRIP_BONUS}</span>
             </div>
           ) : (

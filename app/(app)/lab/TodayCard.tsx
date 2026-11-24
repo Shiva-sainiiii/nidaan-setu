@@ -6,6 +6,7 @@ import { useIdemKey } from "@/lib/useLive";
 import { fmtDT } from "@/lib/format";
 import { Card, PriorityChip, StatusChip, TempMedBadge, btnDanger, btnPrimary, btnSecondary, input } from "@/components/ui";
 import type { Toast } from "./LabDesk";
+import { Icon } from "@/components/Icon";
 
 export type Today = {
   id: number; code: string; test_type_id: string; test_name: string; priority: string; on_temp_medication: boolean;
@@ -81,7 +82,7 @@ export function TodayCard({ r, onResult }: { r: Today; onResult: (t: Toast) => v
           <div className="text-sm text-slate-600">{r.code}{r.bundle_code && <> · bundle {r.bundle_code}</>} · referred by {r.from_name}{r.note && <> · “{r.note}”</>}</div>
           {patient ? (
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
-              <b>{patient.display_name}</b>{patient.age ? `, ${patient.age}` : ""} · 📱 {patient.phone}
+              <b>{patient.display_name}</b>{patient.age ? `, ${patient.age}` : ""} · <Icon name="smartphone" size={15} className="inline -mt-0.5 text-slate-500" /> {patient.phone}
               {patient.abha_id && <> · ABHA {patient.abha_id}</>}
               <span className="ml-2 text-xs text-slate-500">(this view is logged)</span>
             </div>

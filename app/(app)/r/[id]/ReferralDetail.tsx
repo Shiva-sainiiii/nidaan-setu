@@ -8,6 +8,7 @@ import { fmtDT, relTime } from "@/lib/format";
 import { Alert, Card, PriorityChip, ScoreBreakdown, StatusChip, TempMedBadge, btnDanger, btnPrimary, btnSecondary, type Score } from "@/components/ui";
 import { LiveBadge } from "@/components/LiveBadge";
 import { Timeline, type AuditRow } from "@/components/Timeline";
+import { Icon } from "@/components/Icon";
 
 type R = {
   id: number; code: string; status: string; priority: string; on_temp_medication: boolean; note: string;
@@ -143,7 +144,7 @@ export function ReferralDetail({ id, role }: { id: number; role: string }) {
           <Card className="space-y-1 text-sm">
             <div className="text-xs font-semibold uppercase text-slate-500">Patient</div>
             <div className="font-semibold">{r.patient_name}{r.patient_age ? `, ${r.patient_age}` : ""}</div>
-            <div>📱 {r.patient_phone}</div>
+            <div className="flex items-center gap-1.5"><Icon name="smartphone" size={16} className="text-slate-500" /> {r.patient_phone}</div>
             {r.abha_id && <div>ABHA: {r.abha_id}</div>}
             <div className="text-slate-600">Original slot: {fmtDT(r.original_slot_at)}</div>
             {r.note && <div className="mt-2 rounded bg-slate-50 p-2 text-slate-700">“{r.note}”</div>}

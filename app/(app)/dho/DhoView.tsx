@@ -32,14 +32,14 @@ export function DhoView() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Referrals sent" value={k?.sent ?? "…"} />
-        <Stat label="Accepted by a lab" value={k ? `${k.accepted} (${pct(k.accepted, k.sent)})` : "…"} />
-        <Stat label="Tests done earlier" value={k?.tests_done ?? "…"} />
-        <Stat label="Median days saved" value={k ? k.median_days_saved : "…"} hint={k ? `${k.total_days_saved} patient-days in total` : ""} />
-        <Stat label="Queue slots released" value={k?.slots_released ?? "…"} hint="given to the next patient at the sending hospital" />
-        <Stat label="Expired (no lab)" value={k?.expired ?? "…"} hint="patient kept original date" />
-        <Stat label="On temp. medication, >14 days to test" value={k?.temp_med_waiting_14d ?? "…"} hint="needs attention" />
-        <Stat label="Patient trips saved" value={k?.trips_saved ?? "…"} hint={k ? `by booking ${k.bundles} multi-test bundle(s) together` : ""} />
+        <Stat label="Referrals sent" value={k?.sent ?? "…"} icon="send" />
+        <Stat label="Accepted by a lab" value={k ? `${k.accepted} (${pct(k.accepted, k.sent)})` : "…"} icon="checkCircle" accent="green" />
+        <Stat label="Tests done earlier" value={k?.tests_done ?? "…"} icon="flask" accent="green" />
+        <Stat label="Median days saved" value={k ? k.median_days_saved : "…"} hint={k ? `${k.total_days_saved} patient-days in total` : ""} icon="clock" accent="saffron" />
+        <Stat label="Queue slots released" value={k?.slots_released ?? "…"} hint="given to the next patient at the sending hospital" icon="users" accent="green" />
+        <Stat label="Expired (no lab)" value={k?.expired ?? "…"} hint="patient kept original date" icon="x" accent="rose" />
+        <Stat label="On temp. medication, >14 days to test" value={k?.temp_med_waiting_14d ?? "…"} hint="needs attention" icon="alert" accent="amber" />
+        <Stat label="Patient trips saved" value={k?.trips_saved ?? "…"} hint={k ? `by booking ${k.bundles} multi-test bundle(s) together` : ""} icon="route" accent="saffron" />
       </div>
 
       <Card className="overflow-x-auto !p-0">
@@ -53,7 +53,7 @@ export function DhoView() {
           </thead>
           <tbody>
             {data?.hospitals.map((h) => (
-              <tr key={h.id} className="border-t border-slate-100">
+              <tr key={h.id} className="border-t border-slate-100 transition-colors hover:bg-brand-50/60">
                 <td className="px-3 py-1.5 font-medium">{h.short_name} <span className="text-xs text-slate-500">{h.kind === "ppp" ? "PPP" : "Govt"}</span></td>
                 <td className="px-3 py-1.5">{h.sent}</td>
                 <td className="px-3 py-1.5">{h.received}</td>
@@ -75,7 +75,7 @@ export function DhoView() {
             </thead>
             <tbody>
               {data?.doctors.map((d) => (
-                <tr key={d.name} className="border-t border-slate-100">
+                <tr key={d.name} className="border-t border-slate-100 transition-colors hover:bg-brand-50/60">
                   <td className="px-3 py-1.5">{d.name}<div className="text-xs text-slate-500">{d.short_name}</div></td>
                   <td className="px-3 py-1.5">{d.referrals}</td>
                   <td className="px-3 py-1.5">{pct(d.p1, d.referrals)}</td>

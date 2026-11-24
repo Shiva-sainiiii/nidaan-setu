@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 /*
- * Nidaan Setu design tokens: a calm public-service look.
- *  - brand: deep navy (trust, official). White text on brand-700+ is >= 9:1 contrast.
+ * Nidaan Setu design tokens: calm public-service look, with light, purposeful motion.
+ *  - brand: deep navy (trust). White text on brand-600+ is >= 7:1 contrast.
  *  - status colours (emerald / amber / rose / sky) are used ONLY to convey meaning.
- *  - india-*: a thin tricolour accent strip, never as large fills.
+ *  - india-*: thin tricolour accents, never large fills.
+ *  - All motion uses transform/opacity only (GPU-cheap) and stops with prefers-reduced-motion.
  */
 @theme inline {
   --font-sans: var(--font-sans-latin), var(--font-deva), system-ui, sans-serif;
@@ -22,9 +23,10 @@
 
   --color-india-saffron: #ff9933;
   --color-india-green: #138808;
+
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* Light theme only: projector- and print-friendly. */
 :root {
   color-scheme: light;
 }
@@ -32,6 +34,8 @@ body {
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
+  background: #f3f6fa;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Clearly visible keyboard focus everywhere (WCAG 2.4.7), never removed. */
@@ -41,24 +45,194 @@ body {
   border-radius: 6px;
 }
 
+/* ------------------------------------------------------------ ambient background */
+/* Three large soft colour fields drifting very slowly + a faint dot grid. Fixed, behind everything. */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ambient::after {
+  /* faint dot grid that fades towards the bottom */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(23 66 111 / 0.09) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
+}
+.ambient .blob {
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  opacity: 0.55;
+  will-change: transform;
+}
+.ambient .b1 {
+  top: -30vmax;
+  left: -20vmax;
+  background: radial-gradient(circle at center, rgb(132 172 211 / 0.45), transparent 62%);
+  animation: drift-1 38s ease-in-out infinite alternate;
+}
+.ambient .b2 {
+  top: -10vmax;
+  right: -28vmax;
+  background: radial-gradient(circle at center, rgb(255 153 51 / 0.16), transparent 60%);
+  animation: drift-2 46s ease-in-out infinite alternate;
+}
+.ambient .b3 {
+  bottom: -36vmax;
+  left: 20vw;
+  background: radial-gradient(circle at center, rgb(19 136 8 / 0.10), transparent 60%);
+  animation: drift-3 52s ease-in-out infinite alternate;
+}
+@keyframes drift-1 { to { transform: translate3d(12vmax, 8vmax, 0) scale(1.08); } }
+@keyframes drift-2 { to { transform: translate3d(-10vmax, 10vmax, 0) scale(0.95); } }
+@keyframes drift-3 { to { transform: translate3d(-8vmax, -10vmax, 0) scale(1.1); } }
+
+/* ------------------------------------------------------------ entrance motion */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.page-enter {
+  animation: fade-up 0.45s var(--ease-out-soft) both;
+}
+/* Stagger children of a list/grid: <div className="stagger">… */
+.stagger > * {
+  animation: fade-up 0.5s var(--ease-out-soft) both;
+}
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(7) { animation-delay: 360ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 400ms; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.toast-in {
+  animation: toast-in 0.3s var(--ease-out-soft) both;
+}
+
+/* Row/card that just changed: soft amber wash fading out */
 @keyframes flash-in {
   from { background-color: #fff4d6; }
-  to { background-color: #fff; }
+  to { background-color: transparent; }
 }
 .flash-in {
   animation: flash-in 2.5s ease-out;
 }
 
-/* Respect "reduce motion" (no flashing rows or pulsing dots). */
+/* ------------------------------------------------------------ surfaces */
+.surface {
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid rgb(203 213 225 / 0.9);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(14 42 71 / 0.05), 0 8px 24px -16px rgb(14 42 71 / 0.18);
+  transition: box-shadow 0.25s var(--ease-out-soft), border-color 0.25s var(--ease-out-soft),
+    transform 0.25s var(--ease-out-soft);
+}
+.surface:hover {
+  border-color: rgb(179 205 229);
+  box-shadow: 0 1px 2px rgb(14 42 71 / 0.06), 0 14px 32px -16px rgb(14 42 71 / 0.28);
+}
+/* Clickable cards also lift */
+.lift:hover {
+  transform: translateY(-3px);
+}
+.lift:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+/* Arrow that slides on parent hover: <span className="nudge">→</span> */
+.group:hover .nudge,
+.group:focus-visible .nudge {
+  transform: translateX(4px);
+}
+.nudge {
+  transition: transform 0.25s var(--ease-out-soft);
+}
+
+/* ------------------------------------------------------------ buttons */
+/* A light sheen that sweeps across primary buttons on hover */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 0.7s var(--ease-out-soft);
+}
+.btn-shine:hover::after {
+  transform: translateX(120%);
+}
+
+/* ------------------------------------------------------------ navigation underline */
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-brand-700);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s var(--ease-out-soft);
+}
+.nav-link:hover::after {
+  transform: scaleX(0.5);
+  background: var(--color-brand-300);
+}
+.nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+  background: var(--color-brand-700);
+}
+
+/* ------------------------------------------------------------ flow diagram (landing) */
+.flow-line {
+  stroke-dasharray: 6 8;
+  animation: dash 1.6s linear infinite;
+}
+@keyframes dash {
+  to { stroke-dashoffset: -28; }
+}
+@keyframes float {
+  50% { transform: translateY(-4px); }
+}
+.float {
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Respect "reduce motion": no drifting, flashing, sweeping or travelling dots. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .flow-dot { display: none; }
 }
 
 @media print {
-  .no-print { display: none !important; }
+  .no-print, .ambient { display: none !important; }
   body { background: #fff; }
+  .surface { box-shadow: none; }
 }

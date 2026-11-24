@@ -5,6 +5,7 @@ import { useLive } from "@/lib/useLive";
 import { fmtDT } from "@/lib/format";
 import { Alert, Card, PriorityChip, Stat, StatusChip, btnPrimary } from "@/components/ui";
 import { LiveBadge } from "@/components/LiveBadge";
+import { Icon } from "@/components/Icon";
 
 type Row = {
   id: number; code: string; status: string; priority: string; on_temp_medication: boolean; test_name: string;
@@ -26,7 +27,7 @@ export function DoctorHome({ hospital }: { hospital: string }) {
         </div>
         <div className="flex items-center gap-3">
           <LiveBadge stale={stale} />
-          <Link href="/doctor/new" className={btnPrimary}>+ New referral</Link>
+          <Link href="/doctor/new" className={btnPrimary}><Icon name="plus" size={18} /> New referral</Link>
         </div>
       </div>
       {error && <Alert kind="error">{error}</Alert>}
@@ -41,10 +42,10 @@ export function DoctorHome({ hospital }: { hospital: string }) {
       ))}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Active referrals" value={data?.stats.active ?? "…"} />
-        <Stat label="Tests done elsewhere" value={data?.stats.done ?? "…"} />
-        <Stat label="Patient-days saved" value={data?.stats.days_saved ?? "…"} hint="original date − actual test date" />
-        <Stat label="Queue slots released" value={data?.stats.slots_released ?? "…"} hint="given to next patient in your queue" />
+        <Stat label="Active referrals" value={data?.stats.active ?? "…"} icon="send" />
+        <Stat label="Tests done elsewhere" value={data?.stats.done ?? "…"} icon="flask" accent="green" />
+        <Stat label="Patient-days saved" value={data?.stats.days_saved ?? "…"} hint="original date − actual test date" icon="clock" accent="saffron" />
+        <Stat label="Queue slots released" value={data?.stats.slots_released ?? "…"} hint="given to next patient in your queue" icon="users" accent="green" />
       </div>
 
       <Card className="overflow-x-auto !p-0">
@@ -61,7 +62,7 @@ export function DoctorHome({ hospital }: { hospital: string }) {
               <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">No referrals yet. Create one to start.</td></tr>
             )}
             {data?.referrals.map((r) => (
-              <tr key={`${r.id}-${r.status}`} className={`${recent(r.updated_at) ? "flash-in" : ""} border-t border-slate-100 hover:bg-slate-50`}>
+              <tr key={`${r.id}-${r.status}`} className={`${recent(r.updated_at) ? "flash-in" : ""} border-t border-slate-100 transition-colors hover:bg-brand-50/60`}>
                 <td className="px-3 py-2">
                   <Link href={`/r/${r.id}`} className="font-semibold text-brand-800 hover:underline">{r.code}</Link>
                   <div className="mt-0.5 flex flex-wrap gap-1"><PriorityChip p={r.priority} />

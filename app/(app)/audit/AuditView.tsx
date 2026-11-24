@@ -56,7 +56,7 @@ export function AuditView() {
           <tbody>
             {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-slate-500">No entries.</td></tr>}
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 align-top">
+              <tr key={r.id} className="border-t border-slate-100 align-top transition-colors hover:bg-brand-50/60">
                 <td className="px-3 py-1.5 text-xs text-slate-400">{r.id}</td>
                 <td className="whitespace-nowrap px-3 py-1.5" title={fmtDT(r.at)}>{fmtT(r.at)}</td>
                 <td className="px-3 py-1.5">

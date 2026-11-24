@@ -8,6 +8,7 @@ import { LiveBadge } from "@/components/LiveBadge";
 import { IncomingCard, type Incoming } from "./IncomingCard";
 import { BundleCard, ONE_TRIP_BONUS } from "./BundleCard";
 import { TodayCard, type Today } from "./TodayCard";
+import { Icon } from "@/components/Icon";
 
 type Missed = { id: number; code: string; test_type_id: string; priority: string; status: string; response: string | null; winner: string | null; updated_at: string };
 type Done = { id: number; code: string; test_type_id: string; status: string; accepted_slot_at: string; from_name: string; uploaded_at: string | null };
@@ -81,13 +82,16 @@ export function LabDesk({ hospital }: { hospital: string }) {
       {error && <Alert kind="error">{error}</Alert>}
       {toast && <div className="sticky top-24 z-10"><Alert kind={toast.kind}>{toast.text}</Alert></div>}
 
-      <div role="tablist" aria-label="Lab desk sections" className="flex gap-1 border-b border-slate-300">
+      <div role="tablist" aria-label="Lab desk sections" className="inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white/70 p-1 shadow-sm backdrop-blur">
         {tabs.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-            className={`-mb-px min-h-11 border-b-[3px] px-3 text-sm font-semibold ${tab === t.id ? "border-brand-700 text-brand-800" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
+            className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all duration-200 ${
+              tab === t.id ? "bg-brand-700 text-white shadow-md shadow-brand-900/20" : "text-slate-700 hover:bg-brand-50 hover:text-brand-800"}`}>
+            <Icon name={t.id === "incoming" ? "inbox" : t.id === "today" ? "calendar" : "checkCircle"} size={17} />
             {t.label}
             {t.n != null && (
-              <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${t.id === "incoming" && t.n > 0 ? "bg-amber-500 text-white" : "bg-slate-200 text-slate-700"}`}>{t.n}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${
+                t.id === "incoming" && t.n > 0 ? "animate-pulse bg-amber-400 text-amber-950" : tab === t.id ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"}`}>{t.n}</span>
             )}
           </button>
         ))}
@@ -96,9 +100,10 @@ export function LabDesk({ hospital }: { hospital: string }) {
       {tab === "incoming" && (
         <div className="space-y-3">
           {data?.incoming.length === 0 && (
-            <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+            <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white/60 p-10 text-center text-slate-600">
+              <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-600"><Icon name="inbox" size={24} /></span>
               No open requests right now. New ones appear here instantly.
-            </p>
+            </div>
           )}
           {groupIncoming(data?.incoming ?? []).map((g) =>
             g.length > 1 ? (

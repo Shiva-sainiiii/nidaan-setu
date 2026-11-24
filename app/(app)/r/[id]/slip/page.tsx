@@ -5,6 +5,7 @@ import { referralView } from "@/lib/queries";
 import { requireRole } from "@/lib/session";
 import { fmtDT } from "@/lib/format";
 import { PrintButton } from "./PrintButton";
+import { Icon } from "@/components/Icon";
 
 // Printable referral slip: works for patients with no phone at all.
 export default async function SlipPage({ params }: PageProps<"/r/[id]/slip">) {
@@ -37,7 +38,7 @@ export default async function SlipPage({ params }: PageProps<"/r/[id]/slip">) {
             <div className="font-semibold">{r.lab_name}</div>
             <div className="text-sm">{r.lab_address}</div>
             <div className="text-sm">{r.lab_address_hi}</div>
-            <div className="text-sm">📞 {r.lab_phone} · {r.lab_is_free ? "निःशुल्क / Free" : `₹${r.lab_price}`}</div>
+            <div className="flex items-center gap-1 text-sm"><Icon name="phone" size={14} /> {r.lab_phone} · {r.lab_is_free ? "निःशुल्क / Free" : `₹${r.lab_price}`}</div>
           </div>
         ) : (
           <div className="rounded-lg bg-amber-50 p-3 text-sm">लैब तय होने पर SMS आएगा। / You will get an SMS when a lab is booked.</div>

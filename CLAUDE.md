@@ -30,9 +30,12 @@ npm run start:lan  # production build on 0.0.0.0:3000 (no-Wi-Fi fallback)
 Bump `SCHEMA_VERSION` in [lib/db.ts](lib/db.ts) **and** the `comment on schema tb` line at the end of `db/schema.sql` together. The app then rebuilds the demo database automatically (local and Supabase).
 
 ## UI design rules (government / public-service look)
-- Colours: `brand-*` navy (tokens in [app/globals.css](app/globals.css)) for identity and primary actions; emerald/amber/rose/sky **only** for status meaning; `india-*` only for the thin tricolour strip. No gradients.
+- Colours: `brand-*` navy (tokens in [app/globals.css](app/globals.css)) for identity and primary actions; emerald/amber/rose/sky **only** for status meaning; `india-*` only for thin accents.
+- Motion (CSS only, transform/opacity, all off under prefers-reduced-motion): drifting `Ambient` background, `.page-enter` (app/(app)/template.tsx), `.stagger` lists, `.surface` + `.lift` cards, `.btn-shine` primary buttons, `CountUp` numbers, `FlowDiagram` on the landing page.
+- Shared pieces: `Card`/`Stat`/buttons in [components/ui.tsx](components/ui.tsx), SVG icons in [components/Icon.tsx](components/Icon.tsx).
+- If styles look missing in dev after editing globals.css: stop the dev server, `rm -rf .next`, start again (stale Turbopack cache).
 - Every button/link/input is at least 44px tall (`min-h-11`); never remove the focus outline; body text 16px, nothing below 12px.
-- Icons are SVG (no emoji as icons). Hindi text gets `lang="hi"`.
+- Icons are SVG via `<Icon name=…>` (no emoji as icons). Hindi text gets `lang="hi"`.
 - Honest identity: "Pilot concept · synthetic demo data · not an official government service". No national emblem.
 
 ## Rules

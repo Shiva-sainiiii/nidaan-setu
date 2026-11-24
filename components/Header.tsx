@@ -24,7 +24,7 @@ export async function Header() {
   // If the database is down, still render the header (the login page shows the actual error).
   const [u, offsetH] = await Promise.all([getUser(), clockOffsetHours()]).catch(() => [null, 0] as const);
   return (
-    <header className="no-print sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgb(203_213_225)]">
+    <header className="no-print sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-20 focus:rounded focus:bg-white focus:px-3 focus:py-2">
         Skip to main content
       </a>
@@ -42,8 +42,10 @@ export async function Header() {
       </div>
       {/* main bar */}
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-1 px-4">
-        <Link href="/" className="flex min-h-14 items-center gap-2.5" aria-label="Nidaan Setu home">
+        <Link href="/" className="group flex min-h-14 items-center gap-2.5" aria-label="Nidaan Setu home">
+          <span className="transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-105">
           <LogoMark />
+          </span>
           <span className="leading-tight">
             <span className="block text-lg font-bold text-brand-800">Nidaan Setu</span>
             <span className="block text-xs text-slate-600">Diagnostic referral desk</span>
@@ -61,7 +63,7 @@ export async function Header() {
                 </span>
               </span>
               <form action={logout}>
-                <button className="inline-flex min-h-11 items-center rounded-md border border-slate-400 px-3 text-sm font-medium hover:bg-slate-50">
+                <button className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium transition-colors hover:border-brand-300 hover:bg-brand-50">
                   Switch user
                 </button>
               </form>

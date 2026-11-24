@@ -21,8 +21,8 @@ export function Nav({ items }: { items: NavItem[] }) {
             key={n.href}
             href={n.href}
             aria-current={on ? "page" : undefined}
-            className={`inline-flex min-h-11 items-center border-b-[3px] px-3 font-medium ${
-              on ? "border-brand-700 text-brand-800" : "border-transparent text-slate-700 hover:border-slate-300 hover:text-slate-900"
+            className={`nav-link inline-flex min-h-14 items-center px-3 font-medium transition-colors ${
+              on ? "text-brand-800" : "text-slate-700 hover:text-brand-800"
             }`}
           >
             {n.label}
