@@ -54,7 +54,7 @@ Pitch: *Your doctor stays the same. Only the test moves.* All data is synthetic.
 - `components/DistrictMap.tsx`: equirectangular projection of lat/lng into SVG. No tiles, so it works offline. On phones it pans sideways inside the card.
 
 ## Tests, CI, deploy (added 2026-11-25)
-- `tests/unit/*.test.mjs` import `lib/*.ts` directly (Node ≥22.18 strips types). `tests/db/*.test.mjs` use `freshDb()` → in-memory PGlite with real schema + seed. Old `scripts/sql-check.mjs` was folded into `tests/db/` (`check:sql` = `test:db`).
+- `tests/**/*.test.ts` (TypeScript, run by `node --test`; Node ≥22.18 strips types; `allowImportingTsExtensions` in tsconfig). `tests/db/*.test.ts` use `freshDb()` → in-memory PGlite with real schema + seed. Old `scripts/sql-check.mjs` was folded into `tests/db/` (`check:sql` = `test:db`).
 - CI: `.github/workflows/ci.yml` (verify job: lint, `next typegen && tsc`, tests, build; e2e job: start server, check:demo, check:bundle with `/usr/bin/google-chrome`).
 - Deploy: `Dockerfile` (+ HEALTHCHECK on `/api/health`), `render.yaml`, `vercel.json` (bom1).
 

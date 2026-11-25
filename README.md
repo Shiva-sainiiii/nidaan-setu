@@ -10,7 +10,19 @@ One lab accepts a slot (exactly one, guaranteed by the database), the patient ge
 the report comes back to the original doctor, and the patient's original queue slot is released to the next patient.
 
 NexHack 2.0 · Open Innovation · **all hospitals, patients and phone numbers are fictional (synthetic data).**
-Full plan, judge Q&A and pitch: [PLAN.md](PLAN.md). Code conventions and module status: [CLAUDE.md](CLAUDE.md).
+## Documentation
+
+| | |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | components, request flow, design decisions |
+| [docs/DATABASE.md](docs/DATABASE.md) | tables, referral state machine, all `tb.*` functions |
+| [docs/API.md](docs/API.md) | HTTP endpoints and server actions |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | how each role uses the app |
+| [docs/TESTING.md](docs/TESTING.md) | unit, database and end-to-end tests |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker, Render, Vercel + Supabase, offline LAN |
+| [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) | security model, code rules, changes |
+
+Pitch plan and judge Q&A: [PLAN.md](PLAN.md).
 
 ---
 
@@ -106,13 +118,13 @@ It presses **Reset demo data**, then plays the whole flow above across 4 simulat
 
 | Command | What it checks | Needs |
 |---|---|---|
-| `npm test` | **34 automated tests** (Node's built-in test runner, no extra packages) | nothing |
+| `npm test` | **34 automated tests** in `tests/**/*.test.ts` (Node's built-in test runner, no extra packages) | nothing |
 | `npm run test:unit` | `tests/unit/`: DATABASE_URL repair, IST date formatting, phone masking, every status/consent label exists in Hindi + English | nothing |
 | `npm run test:db` | `tests/db/`: the real `db/schema.sql` on a throwaway in-memory Postgres (PGlite): idempotent create, two-lab accept race (exactly one winner, loser audited), state machine rejects out-of-order steps, slot release to next patient, one report per referral, no-show reopen, append-only audit log, SMS dedupe, offer window + tie-breaks + bundle preference, SMS consent YES / NO / unclear / 24h expiry | nothing |
 | `npm run test:e2e` | `check:demo` + `check:bundle`: the full demo in headless Chrome across 4 simulated devices | app running + Chrome |
 | `npm run verify` | lint + typecheck + tests + production build | nothing |
 
-Database tests never touch `./.data` or a running app. **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, typecheck, all tests and the build on every push and pull request, then starts the production server and runs both end-to-end rehearsals.
+Details: [docs/TESTING.md](docs/TESTING.md). Database tests never touch `./.data` or a running app. **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, typecheck, all tests and the build on every push and pull request, then starts the production server and runs both end-to-end rehearsals.
 
 ---
 

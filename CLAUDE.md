@@ -44,7 +44,7 @@ Bump `SCHEMA_VERSION` in [lib/db.ts](lib/db.ts) **and** the `comment on schema t
 - Honest identity: "Pilot concept · synthetic demo data · not an official government service". No national emblem.
 
 ## Rules
-- New DB behaviour gets a test in `tests/db/` (use `freshDb()` from `tests/helpers/db.mjs`).
+- New DB behaviour gets a test in `tests/db/` (use `freshDb()` from `tests/helpers/db.ts`). Docs live in `docs/`; update them with each change.
 - Never write referral state from TS directly; add/extend a `tb.*` function instead.
 - Client mutations pass a key from `useIdemKey()`; rotate it after any definitive result (ok or not), keep it on network errors.
 - No invented statistics in UI or pitch; computed numbers only.
