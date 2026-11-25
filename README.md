@@ -1,5 +1,7 @@
 # Nidaan Setu
 
+[![CI](https://github.com/Shiva-sainiiii/nidaan-setu/actions/workflows/ci.yml/badge.svg)](https://github.com/Shiva-sainiiii/nidaan-setu/actions/workflows/ci.yml)
+
 > **Your doctor stays the same. Only the test moves, to wherever it can be done fastest.**
 > आपका डॉक्टर वही रहेगा। सिर्फ़ जाँच वहाँ होगी जहाँ सबसे जल्दी हो सके।
 
@@ -96,12 +98,34 @@ npm run check:demo      # needs the app running + Chrome at /usr/bin/google-chro
 ```
 It presses **Reset demo data**, then plays the whole flow above across 4 simulated devices and prints `PASS`.
 `npm run check:bundle` does the same for the multi-test bundle (MRI + CT, one trip).
-`npm run check:sql` tests the database rules on a throwaway in-memory database (offer window, tie-breaks, bundle preference); it does not touch your data.
 **It resets the demo data**, so run it before you set up the real devices, not during the demo.
 
 ---
 
+## Tests
+
+| Command | What it checks | Needs |
+|---|---|---|
+| `npm test` | **34 automated tests** (Node's built-in test runner, no extra packages) | nothing |
+| `npm run test:unit` | `tests/unit/`: DATABASE_URL repair, IST date formatting, phone masking, every status/consent label exists in Hindi + English | nothing |
+| `npm run test:db` | `tests/db/`: the real `db/schema.sql` on a throwaway in-memory Postgres (PGlite): idempotent create, two-lab accept race (exactly one winner, loser audited), state machine rejects out-of-order steps, slot release to next patient, one report per referral, no-show reopen, append-only audit log, SMS dedupe, offer window + tie-breaks + bundle preference, SMS consent YES / NO / unclear / 24h expiry | nothing |
+| `npm run test:e2e` | `check:demo` + `check:bundle`: the full demo in headless Chrome across 4 simulated devices | app running + Chrome |
+| `npm run verify` | lint + typecheck + tests + production build | nothing |
+
+Database tests never touch `./.data` or a running app. **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, typecheck, all tests and the build on every push and pull request, then starts the production server and runs both end-to-end rehearsals.
+
+---
+
 ## Deploy
+
+Deployment files in the repo: [Dockerfile](Dockerfile) (with healthcheck), [render.yaml](render.yaml) (Render Blueprint, persistent disk), [vercel.json](vercel.json) (Mumbai region `bom1`), [.env.example](.env.example). Every deployment exposes `GET /api/health` (200 when the database works, 503 otherwise, never shows the password).
+
+**Option 0: Docker (any server or laptop).**
+```bash
+docker build -t nidaan-setu .
+docker run -d -p 3000:3000 -v nidaan-data:/app/.data --name nidaan-setu nidaan-setu   # built-in database on a volume
+# or with Postgres/Supabase: add  -e DATABASE_URL='postgresql://…:6543/postgres'
+```
 
 **Option A: one Node server with the built-in database (simplest).** Any host that runs a normal, always-on Node process:
 Render “Web Service”, Railway, a college/VPS machine, or a laptop.
@@ -112,7 +136,7 @@ npm start            # listens on $PORT (default 3000) on all interfaces
 ```
 Env vars: none needed (`DATABASE_URL` empty). Run **one** instance only (the local database lives on that machine’s disk).
 On hosts without a persistent disk the demo data is recreated on every redeploy, which is fine for a demo.
-Render: Build command `npm ci && npm run build`, Start command `npm start`, instance count 1.
+Render: *New → Blueprint* picks up [render.yaml](render.yaml) (or set Build command `npm ci && npm run build`, Start command `npm start`, instance count 1, health check `/api/health`).
 
 **Option B: Vercel + Supabase.** Vercel runs many short-lived copies of the app, so it needs a shared database:
 1. Supabase project (region Mumbai) → **Connect** (top bar) → **Transaction pooler** → copy the URI (port **6543**), and put your real password in it.

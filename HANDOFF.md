@@ -24,8 +24,8 @@ Pitch: *Your doctor stays the same. Only the test moves.* All data is synthetic.
 | **Feature 1: offer window + earliest slot** (2026-11-25) | ✅ |
 | **Feature 2: consent by SMS** (2026-11-25) | ✅ |
 | **Feature 3: DHO district map** (2026-11-25) | ✅ |
-| check:sql 44/44 · check:demo 47s (incl. offers, YES/NO consent, map) · check:bundle · `next build` | ✅ |
-| `npm run check:demo`, `check:bundle`, `check:sql` | ✅ PASS |
+| **Tests + CI + deploy files** (2026-11-25, after HackEval AI review said "no tests, not deployment-ready") | ✅ |
+| `npm test` 34/34 (unit + DB) · check:demo · check:bundle · `npm run verify` · Docker image healthy | ✅ PASS |
 | `npx next build` | ✅ |
 | Deployable zip `../nidaan-setu.zip` | ✅ (rebuild after changes, see below) |
 
@@ -52,6 +52,11 @@ Pitch: *Your doctor stays the same. Only the test moves.* All data is synthetic.
 ## Feature 3 design (DHO map)
 - `dhoView(filter)` in `lib/queries.ts`: every number comes from the CTE `f` (test + days filter). Read-only. `/api/live?view=dho&test=MRI&days=7`.
 - `components/DistrictMap.tsx`: equirectangular projection of lat/lng into SVG. No tiles, so it works offline. On phones it pans sideways inside the card.
+
+## Tests, CI, deploy (added 2026-11-25)
+- `tests/unit/*.test.mjs` import `lib/*.ts` directly (Node ≥22.18 strips types). `tests/db/*.test.mjs` use `freshDb()` → in-memory PGlite with real schema + seed. Old `scripts/sql-check.mjs` was folded into `tests/db/` (`check:sql` = `test:db`).
+- CI: `.github/workflows/ci.yml` (verify job: lint, `next typegen && tsc`, tests, build; e2e job: start server, check:demo, check:bundle with `/usr/bin/google-chrome`).
+- Deploy: `Dockerfile` (+ HEALTHCHECK on `/api/health`), `render.yaml`, `vercel.json` (bom1).
 
 ## Gotchas (learned the hard way)
 - **Page reloads every second in dev** (HMR loop, login bounces to `/`): stop the server, `rm -rf .next`, start again.

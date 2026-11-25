@@ -31,7 +31,7 @@ await doc.getByText("Use demo patient").click();
 await doc.locator("label", { hasText: "CT scan" }).first().click();
 await doc.getByText(/2 tests → one bundle/).waitFor();
 await doc.getByText(/all 2 tests, one trip/).first().waitFor();
-await doc.getByRole("button", { name: /P1 Urgent/ }).click(); // P1: direct accept race (offer window is covered by check:sql)
+await doc.getByRole("button", { name: /P1 Urgent/ }).click(); // P1: direct accept race (offer window is covered by tests/db)
 await doc.getByText(/I explained to the patient/).click();
 await shot(doc, "b1-form");
 await doc.getByRole("button", { name: /Send 2 tests to/ }).dblclick();
